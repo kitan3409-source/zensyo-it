@@ -1,6 +1,20 @@
-# 公開URLを自分で立てる方法（Render 推奨）
+# 公開URLを自分で立てる方法
 
-Devinのデプロイ基盤が使えない場合の代替手順。Render の無料枠で動きます。
+## A. Cloudflare Workers + D1（推奨・無料・常時起動）
+
+`worker/` ディレクトリ版。静的ページ＋API＋DB（D1）を1つの `workers.dev` URLで公開。
+
+1. https://dash.cloudflare.com で無料アカウント作成
+2. `cd worker && npx wrangler login`（ブラウザが開いて承認）
+3. `./deploy.sh` を実行（D1作成→テーブル作成→デプロイまで自動）
+4. `https://zensho-quiz.<アカウント名>.workers.dev` が公開URL
+
+- 生徒用: `/`、先生用: `/teacher`（初期パスワード `sensei`）
+- 先生パスワード変更: `npx wrangler secret put TEACHER_PW`
+- 無料枠: Workers 10万req/日、D1 500万read/日・10万write/日 — クラス全員で使っても余裕
+- データは消えません（D1は永続DB）
+
+## B. Render（FastAPI版 `deploy/`）
 
 ## 構成
 
@@ -10,16 +24,14 @@ Devinのデプロイ基盤が使えない場合の代替手順。Render の無�
 
 ## Render で公開する手順
 
-1. GitHubで新規リポジトリを作成（public or private）
-2. この `deploy/` フォルダの中身をすべてアップロード
-   （GitHubの「Add file → Upload files」でOK、gitコマンド不要）
-3. https://render.com でサインアップ →「New +」→「Web Service」
-4. 作成したリポジトリを接続
-5. 設定:
+1. https://render.com でサインアップ →「New +」→「Web Service」
+2. `kitan3409-source/zensyo-it` リポジトリを接続
+3. 設定:
+   - Root Directory: `deploy`
    - Runtime: **Python 3**
    - Build Command: `pip install .`
    - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-6. 「Create Web Service」→ `https://xxxx.onrender.com` が公開URL
+4. 「Create Web Service」→ `https://xxxx.onrender.com` が公開URL
 
 ## URL
 

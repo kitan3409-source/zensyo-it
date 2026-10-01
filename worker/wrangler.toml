@@ -1,0 +1,12 @@
+name = "zensho-quiz"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./static"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zensho-quiz-db"
+database_id = "REPLACE_ME"

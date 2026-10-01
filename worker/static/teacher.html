@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>先生用ダッシュボード — 情報処理1級クイズ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: #f0ebf8;
+    color: #202124;
+    padding: 16px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .card {
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .card.title-card { border-top: 8px solid #673ab7; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .sub { color: #5f6368; font-size: 0.85rem; }
+  input[type=password] {
+    width: 100%; max-width: 320px;
+    padding: 10px 12px; font-size: 0.95rem;
+    border: 1px solid #dadce0; border-radius: 6px; margin-top: 14px;
+  }
+  .btn {
+    background: #673ab7; color: #fff; border: none; border-radius: 6px;
+    padding: 11px 22px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 12px;
+  }
+  .btn:hover { background: #5e35b1; }
+  .err { color: #d93025; font-size: 0.85rem; margin-top: 8px; display: none; }
+  h2 { font-size: 1.05rem; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  th { color: #5f6368; font-size: 0.78rem; font-weight: 600; }
+  .rate { font-weight: 700; }
+  .rate.good { color: #188038; }
+  .rate.mid { color: #e8710a; }
+  .rate.bad { color: #d93025; }
+  .bar-cell { min-width: 90px; }
+  .mini { height: 8px; background: #eee; border-radius: 999px; overflow: hidden; }
+  .mini > div { height: 100%; background: #673ab7; }
+  .refreshed { font-size: 0.75rem; color: #5f6368; text-align: right; }
+  .empty { color: #5f6368; font-size: 0.9rem; padding: 14px 0; }
+  #dashArea { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card title-card" id="loginCard">
+    <h1>先生用ダッシュボード</h1>
+    <div class="sub">生徒の回答状況を確認できます。パスワードを入力してください。</div>
+    <input type="password" id="pwInput" placeholder="パスワード">
+    <div class="err" id="pwErr">パスワードが違います</div>
+    <button class="btn" id="loginBtn">表示</button>
+  </div>
+
+  <div id="dashArea">
+    <div class="card">
+      <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
+      <table>
+        <thead><tr><th>名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>最終回答</th></tr></thead>
+        <tbody id="studentRows"></tbody>
+      </table>
+      <div class="empty" id="noStudents">まだ回答がありません</div>
+    </div>
+
+    <div class="card">
+      <h2>用語別 正答率（間違えられやすい順）</h2>
+      <table>
+        <thead><tr><th>用語</th><th>出題数</th><th>正答率</th></tr></thead>
+        <tbody id="termRows"></tbody>
+      </table>
+      <div class="empty" id="noTerms">まだ回答がありません</div>
+    </div>
+    <div class="refreshed">10秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
+  </div>
+</div>
+
+<script>
+let pw = sessionStorage.getItem('teacher-pw') || '';
+const $ = (id) => document.getElementById(id);
+
+function rateClass(r) { return r >= 80 ? 'good' : r >= 50 ? 'mid' : 'bad'; }
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function load() {
+  const res = await fetch('/api/stats?pw=' + encodeURIComponent(pw));
+  if (res.status === 403) {
+    if (pw) $('pwErr').style.display = 'block';
+    $('loginCard').style.display = 'block';
+    $('dashArea').style.display = 'none';
+    return;
+  }
+  const d = await res.json();
+  $('loginCard').style.display = 'none';
+  $('dashArea').style.display = 'block';
+
+  $('studentCount').textContent = d.students.length;
+  $('noStudents').style.display = d.students.length ? 'none' : 'block';
+  $('studentRows').innerHTML = d.students.map(s => `
+    <tr>
+      <td>${esc(s.student)}</td>
+      <td>${s.answered}</td>
+      <td>${s.correct}</td>
+      <td class="rate ${rateClass(s.rate)}">${s.rate}%</td>
+      <td class="bar-cell"><div class="mini"><div style="width:${s.rate}%"></div></div></td>
+      <td>${fmtTime(s.last_ts)}</td>
+    </tr>`).join('');
+
+  $('noTerms').style.display = d.terms.length ? 'none' : 'block';
+  $('termRows').innerHTML = d.terms.map(t => `
+    <tr>
+      <td>${esc(t.term)}</td>
+      <td>${t.answered}</td>
+      <td class="rate ${rateClass(t.rate)}">${t.rate}%</td>
+    </tr>`).join('');
+  $('ts').textContent = new Date().toLocaleTimeString('ja-JP');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+$('loginBtn').onclick = () => {
+  pw = $('pwInput').value;
+  sessionStorage.setItem('teacher-pw', pw);
+  $('pwErr').style.display = 'none';
+  load();
+};
+$('pwInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+if (pw) load();
+setInterval(() => { if (pw) load(); }, 10000);
+</script>
+</body>
+</html>
