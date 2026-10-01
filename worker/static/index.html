@@ -38,19 +38,24 @@
     padding: 22px;
     margin-bottom: 14px;
   }
-  label { display: block; font-size: 0.8rem; color: var(--muted); margin: 12px 0 4px; }
-  input[type=text], select {
-    width: 100%;
-    padding: 9px 12px;
-    font-size: 0.95rem;
-    background: var(--card2);
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .controls input[type=text], .controls select {
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    background: var(--card);
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 8px;
+    min-width: 0;
   }
+  .controls input[type=text] { flex: 1.2; }
+  .controls select { flex: 1; }
+  .controls input[type=text].need { border-color: var(--wrong); }
   input[type=text]:focus, select:focus { outline: none; border-color: var(--accent); }
-  .row { display: flex; gap: 10px; }
-  .row > div { flex: 1; }
   .btn {
     background: var(--accent);
     color: #082f49;
@@ -131,7 +136,6 @@
   .feedback .label { font-weight: 700; margin-right: 8px; }
   .nav { margin-top: 14px; display: none; justify-content: flex-end; }
   .nav.show { display: flex; }
-  .err { color: var(--wrong); font-size: 0.85rem; margin-top: 8px; display: none; }
   .hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
   .score { text-align: center; padding: 24px 0 8px; }
   .score .big { font-size: 3rem; font-weight: 700; color: var(--accent); margin: 10px 0; }
@@ -141,48 +145,36 @@
 <div class="container">
   <header>
     <h1>情報処理1級 4択クイズ</h1>
-    <div class="sub">全商 共通範囲＋ビジネス情報部門 全<span id="totalTerms">?</span>語 ｜ 回答は先生のダッシュボードに記録されます</div>
+    <div class="sub">全商 共通範囲＋ビジネス情報部門 全<span id="totalTerms">?</span>語</div>
   </header>
 
-  <div class="card" id="startCard">
-    <label for="nameInput">名前</label>
-    <input type="text" id="nameInput" placeholder="例：商業3年A組 田中" maxlength="50">
-    <div class="row">
-      <div>
-        <label for="scopeSel">出題範囲</label>
-        <select id="scopeSel"></select>
-      </div>
-      <div>
-        <label for="countSel">問題数</label>
-        <select id="countSel">
-          <option value="10">10問</option>
-          <option value="20" selected>20問</option>
-          <option value="50">50問</option>
-          <option value="all">全部</option>
-        </select>
-      </div>
-    </div>
-    <div class="err" id="nameErr">名前を入力してください</div>
-    <button class="btn" id="startBtn">スタート</button>
+  <div class="controls">
+    <input type="text" id="nameInput" placeholder="名前（記録用）" maxlength="50">
+    <select id="scopeSel" title="出題範囲"></select>
+    <select id="countSel" title="問題数">
+      <option value="10">10問</option>
+      <option value="20" selected>20問</option>
+      <option value="50">50問</option>
+      <option value="all">全部</option>
+    </select>
   </div>
 
-  <div id="quizArea" style="display:none">
-    <div class="stats">
-      <span>正解 <b id="statCorrect">0</b>/<b id="statTotal">0</b></span>
-      <span>正答率 <b id="statRate">-</b></span>
-      <span>連続正解 <b id="statStreak">0</b></span>
-    </div>
-    <div class="progress"><div id="bar"></div></div>
-    <div class="card">
-      <div class="q-meta" id="qNum"></div>
-      <span class="q-badge" id="qBadge"></span>
-      <div class="prompt" id="qPrompt"></div>
-      <div class="choices" id="choices"></div>
-      <div class="feedback" id="feedback"></div>
-      <div class="nav" id="nextRow"><button class="btn" id="nextBtn">次の問題 →</button></div>
-    </div>
-    <div class="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
+  <div class="stats">
+    <span>正解 <b id="statCorrect">0</b>/<b id="statTotal">0</b></span>
+    <span>正答率 <b id="statRate">-</b></span>
+    <span>連続正解 <b id="statStreak">0</b></span>
   </div>
+  <div class="progress"><div id="bar"></div></div>
+
+  <div class="card" id="quizCard">
+    <div class="q-meta" id="qNum"></div>
+    <span class="q-badge" id="qBadge"></span>
+    <div class="prompt" id="qPrompt"></div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="nav" id="nextRow"><button class="btn" id="nextBtn">次の問題 →</button></div>
+  </div>
+  <div class="hint" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
 
   <div class="card" id="scoreCard" style="display:none">
     <div class="score">
@@ -190,7 +182,6 @@
       <div class="big"><span id="scoreNum">0</span>点</div>
       <div class="sub" id="scoreDetail" style="color:var(--muted)"></div>
       <button class="btn" id="againBtn">もう一度</button>
-      <button class="btn ghost" id="backBtn">設定に戻る</button>
     </div>
   </div>
 </div>
@@ -210,6 +201,7 @@ fetch('/terms').then(r => r.json()).then(d => {
   sel.add(new Option('すべて', 'すべて'));
   ['共通', 'ビジネス情報'].forEach(dep => sel.add(new Option(dep, dep)));
   cats.forEach(c => sel.add(new Option(c, 'cat:' + c)));
+  startQuiz();
 });
 
 function shuffle(a) {
@@ -229,17 +221,13 @@ function pool() {
 }
 
 function startQuiz() {
-  const name = $('nameInput').value.trim();
-  if (!name) { $('nameErr').style.display = 'block'; return; }
-  $('nameErr').style.display = 'none';
-  localStorage.setItem('quiz-name', name);
   const p = shuffle(pool());
   const n = $('countSel').value === 'all' ? p.length : Math.min(parseInt($('countSel').value), p.length);
-  session = { name, qs: p.slice(0, n), idx: 0, correct: 0, streak: 0 };
-  $('startCard').style.display = 'none';
+  session = { qs: p.slice(0, n), idx: 0, correct: 0, streak: 0 };
   $('scoreCard').style.display = 'none';
-  $('quizArea').style.display = 'block';
+  $('quizCard').style.display = 'block';
   $('statTotal').textContent = session.qs.length;
+  updateStats();
   showQuestion();
 }
 
@@ -282,6 +270,15 @@ function showQuestion() {
 
 async function answer(i) {
   if (answered) return;
+  const name = $('nameInput').value.trim();
+  if (!name) {
+    $('nameInput').classList.add('need');
+    $('nameInput').placeholder = '← 先に名前を入力してね';
+    $('nameInput').focus();
+    return;
+  }
+  $('nameInput').classList.remove('need');
+  localStorage.setItem('quiz-name', name);
   answered = true;
   const { t, t2m, key, choices } = session.current;
   const correct = choices[i] === t[key];
@@ -307,7 +304,7 @@ async function answer(i) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        student: session.name,
+        student: name,
         term: t.term,
         direction: t2m ? 't2m' : 'm2t',
         correct: correct
@@ -328,29 +325,24 @@ function updateStats() {
 function next() {
   session.idx++;
   if (session.idx >= session.qs.length) {
-    $('quizArea').style.display = 'none';
+    $('quizCard').style.display = 'none';
+    $('hint').style.display = 'none';
     $('scoreCard').style.display = 'block';
     const pct = Math.round(session.correct / session.qs.length * 100);
     $('scoreNum').textContent = pct;
-    $('scoreDetail').textContent = `${session.qs.length}問中 ${session.correct}問正解 — ${session.name}`;
+    $('scoreDetail').textContent = `${session.qs.length}問中 ${session.correct}問正解`;
   } else {
     showQuestion();
   }
 }
 
-$('startBtn').onclick = startQuiz;
 $('nextBtn').onclick = next;
-$('againBtn').onclick = () => {
-  session.qs = shuffle(pool()).slice(0, session.qs.length);
-  session.idx = 0; session.correct = 0; session.streak = 0;
-  updateStats();
-  $('scoreCard').style.display = 'none';
-  $('quizArea').style.display = 'block';
-  showQuestion();
-};
-$('backBtn').onclick = () => { $('scoreCard').style.display = 'none'; $('startCard').style.display = 'block'; };
+$('againBtn').onclick = () => { $('hint').style.display = 'block'; startQuiz(); };
+$('scopeSel').onchange = startQuiz;
+$('countSel').onchange = startQuiz;
 document.addEventListener('keydown', (e) => {
-  if ($('quizArea').style.display !== 'none' && !answered && ['1','2','3','4'].includes(e.key)) {
+  if (document.activeElement === $('nameInput')) return;
+  if ($('quizCard').style.display !== 'none' && !answered && ['1','2','3','4'].includes(e.key)) {
     const i = Number(e.key) - 1;
     if ($('choices').children[i]) answer(i);
   } else if (answered && e.key === 'Enter' && $('nextRow').classList.contains('show')) {
