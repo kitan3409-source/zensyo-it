@@ -1,0 +1,11 @@
+pyproject.toml
+app/__init__.py
+app/main.py
+app/static/index.html
+app/static/teacher.html
+app/static/terms.json
+zensho_quiz.egg-info/PKG-INFO
+zensho_quiz.egg-info/SOURCES.txt
+zensho_quiz.egg-info/dependency_links.txt
+zensho_quiz.egg-info/requires.txt
+zensho_quiz.egg-info/top_level.txt
