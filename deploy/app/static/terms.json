@@ -1,0 +1,1274 @@
+{
+  "exam": "全国商業高等学校協会 情報処理検定 第1級",
+  "source": "令和8年度 情報処理検定試験級別出題範囲",
+  "source_url": "https://zensho.or.jp/puf/download/exam/range/info-1.pdf",
+  "terms": [
+    {
+      "term": "ウォータフォールモデル",
+      "meaning": "要件定義から運用・保守までの各工程を順番に進め、前の工程に戻らない一方通行の開発手法",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "システムの開発と運用"
+    },
+    {
+      "term": "プロトタイピングモデル",
+      "meaning": "試作品（プロトタイプ）を早期に作成し、利用者の評価と改良を繰り返して仕様を確定する開発手法",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "システムの開発と運用"
+    },
+    {
+      "term": "スパイラルモデル",
+      "meaning": "設計・プロトタイプ作成・評価のサイクルを繰り返し、段階的にシステムを完成させる開発手法",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "システムの開発と運用"
+    },
+    {
+      "term": "要件定義",
+      "meaning": "利用者の要求を整理し、システムに求める機能や性能を明確にする開発工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "外部設計",
+      "meaning": "画面や帳票など、利用者から見えるシステムの外部仕様を設計する工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "内部設計",
+      "meaning": "外部設計を基に、システム内部の処理方式やデータ構造を設計する工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "プログラム設計",
+      "meaning": "内部設計を基に、プログラム単位の処理手順やロジックを設計する工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "プログラミング",
+      "meaning": "設計書に基づき、プログラム言語でコードを記述する工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "単体テスト",
+      "meaning": "プログラム（モジュール）ごとに単独で正しく動作するか検証するテスト",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "テスト"
+    },
+    {
+      "term": "結合テスト",
+      "meaning": "複数のモジュールを組み合わせ、インタフェースや連携が正しく動くか検証するテスト",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "テスト"
+    },
+    {
+      "term": "システムテスト",
+      "meaning": "システム全体を本番に近い環境で動かし、要件を満たすか総合的に検証するテスト",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "テスト"
+    },
+    {
+      "term": "運用・保守",
+      "meaning": "完成したシステムを稼働させ、障害対応や修正・改善を継続的に行う工程",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "開発工程"
+    },
+    {
+      "term": "ブラックボックステスト",
+      "meaning": "内部構造を見ず、入力と出力の関係だけで仕様通りかを検証するテスト手法",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "テスト"
+    },
+    {
+      "term": "ホワイトボックステスト",
+      "meaning": "プログラムの内部構造や論理を踏まえて、網羅的に検証するテスト手法",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "テスト"
+    },
+    {
+      "term": "開発期間に関する計算（人日・人月）",
+      "meaning": "1人が1日（1か月）でこなす作業量を単位として、開発工数や期間を見積もる計算",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "システムの開発と運用"
+    },
+    {
+      "term": "RASIS",
+      "meaning": "信頼性・可用性・保守性・完全性・安全性の5指標でシステムを評価する基準",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "信頼性（Reliability）",
+      "meaning": "RASISの1つ。システムが故障せず安定して動作する度合い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "可用性（Availability）",
+      "meaning": "RASISの1つ。必要なときにシステムを利用できる度合い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "保守性（Serviceability）",
+      "meaning": "RASISの1つ。障害時に容易に修理・回復できる度合い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "完全性（Integrity）",
+      "meaning": "RASISの1つ。データが正確で矛盾なく保たれている度合い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "安全性（Security）",
+      "meaning": "RASISの1つ。不正アクセスや破壊からシステムを守れる度合い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "稼働率",
+      "meaning": "システムが正常に稼働している時間の割合。MTBF÷(MTBF+MTTR)で求める",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "平均故障間隔（MTBF）",
+      "meaning": "故障から次の故障までの平均時間。長いほど信頼性が高い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "平均修復時間（MTTR）",
+      "meaning": "故障から復旧するまでの平均時間。短いほど保守性が高い",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "スループット",
+      "meaning": "単位時間あたりにシステムが処理できる仕事の量",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "レスポンスタイム",
+      "meaning": "利用者が要求を出してから応答が返るまでの時間",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "ターンアラウンドタイム",
+      "meaning": "ジョブを投入してから処理結果が出力されるまでの全時間",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "フォールトトレラント",
+      "meaning": "障害が発生してもシステム全体の機能を維持できる性質・設計（冗長化など）",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "フォールトアボイダンス",
+      "meaning": "そもそも障害が発生しないよう、信頼性の高い部品や設計を用いる考え方",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "フェールセーフ",
+      "meaning": "障害時にシステムを安全側の状態に制御する設計思想",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "フェールソフト",
+      "meaning": "障害時に一部機能を停止しても縮退運転で処理を継続する設計思想",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "フールプルーフ",
+      "meaning": "利用者の誤操作によって障害が起きないよう配慮する設計思想",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "NAS",
+      "meaning": "LANに直接接続してファイルを共有する記憶装置（Network Attached Storage）",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "RAID",
+      "meaning": "複数のディスクを組み合わせて信頼性や性能を高める技術",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "ミラーリング",
+      "meaning": "同じデータを2台のディスクに同時に書き込み冗長化する方式（RAID 1）",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "ストライピング",
+      "meaning": "データを分割して複数のディスクに分散して書き込み高速化する方式（RAID 0）",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "障害対策"
+    },
+    {
+      "term": "記憶容量に関する計算",
+      "meaning": "KB・MB・GB・TBなどの単位換算や、必要なディスク容量を求める計算",
+      "department": "共通",
+      "category": "ハードウェア・ソフトウェアに関する知識",
+      "subcategory": "性能・障害管理"
+    },
+    {
+      "term": "OSI参照モデル",
+      "meaning": "ISOが定めた、通信の役割を7つの層に分けた参照モデル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ハブ",
+      "meaning": "複数の機器を接続し、受信したデータを全ポートに送信する集線装置",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ルータ",
+      "meaning": "異なるネットワーク間を接続し、宛先IPアドレスに基づき最適な経路でパケットを中継する装置",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "パケットフィルタリング",
+      "meaning": "通過するパケットのIPアドレスやポート番号を調べ、許可・拒否するセキュリティ機能",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ゲートウェイ",
+      "meaning": "プロトコルやデータ形式が異なるネットワーク同士を変換して接続する装置",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "プロトコル",
+      "meaning": "通信の手順やデータ形式を定めた約束事（規約）",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "TCP/IP",
+      "meaning": "インターネットの基本となる通信プロトコル群。TCPが信頼性ある通信、IPがパケット配送を担当",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "HTTP",
+      "meaning": "Webサーバとブラウザの間でHTMLなどのデータをやり取りするプロトコル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "FTP",
+      "meaning": "ファイルを転送するためのプロトコル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "POP",
+      "meaning": "サーバ上のメールを受信するためのプロトコル。受信後サーバから削除するのが基本",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "IMAP",
+      "meaning": "サーバ上のメールをサーバに残したまま閲覧・管理するプロトコル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "SMTP",
+      "meaning": "メールを送信・転送するプロトコル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "DHCP",
+      "meaning": "IPアドレスなどのネットワーク設定を自動で割り当てるプロトコル",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル"
+    },
+    {
+      "term": "MACアドレス",
+      "meaning": "ネットワーク機器に割り当てられた固有の物理アドレス",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "IPアドレス",
+      "meaning": "ネットワーク上の機器を識別する論理アドレス",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "IPv4",
+      "meaning": "32ビットで表すIPアドレス規格（例：192.168.1.1）",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "IPv6",
+      "meaning": "128ビットで表す次世代IPアドレス規格。アドレス不足を解消する",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "CIDR",
+      "meaning": "IPアドレスを「アドレス/プレフィックス長」で表し、クラスに依存せず柔軟に割り当てる方式",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "プライベートIPアドレス",
+      "meaning": "LAN内でのみ使えるIPアドレス。インターネット上では使えない",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "グローバルIPアドレス",
+      "meaning": "インターネット上で一意に割り当てられるIPアドレス",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "サブネットマスク",
+      "meaning": "IPアドレスをネットワーク部とホスト部に分けるためのビット列",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ネットワークアドレス",
+      "meaning": "ネットワーク（サブネット）自体を表すアドレス。ホスト部がすべて0",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ブロードキャストアドレス",
+      "meaning": "同一ネットワーク内の全機器へ一斉送信するためのアドレス。ホスト部がすべて1",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ホストアドレス",
+      "meaning": "IPアドレスのうち、ネットワーク内の個々の機器を識別する部分",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "ポート番号",
+      "meaning": "通信先のアプリケーション（サービス）を識別する番号",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "NAT",
+      "meaning": "プライベートIPアドレスとグローバルIPアドレスを相互変換する技術",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "DMZ",
+      "meaning": "外部ネットワークと内部ネットワークの間に設ける、公開サーバ用の緩衝区域",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "DNS",
+      "meaning": "ドメイン名とIPアドレスを相互変換（名前解決）する仕組み",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "VPN",
+      "meaning": "公衆回線上に暗号化した仮想的な専用回線を構築する技術",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "通信速度（bps）に関する計算",
+      "meaning": "1秒間に転送できるビット数（bits per second）を用いた転送時間や速度の計算",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成"
+    },
+    {
+      "term": "シンクライアント",
+      "meaning": "処理やデータ保存をサーバで行い、端末は画面表示と入力だけを担う仕組み",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用"
+    },
+    {
+      "term": "Cookie",
+      "meaning": "Webサーバがブラウザに保存させる利用者情報（ログイン状態など）の仕組み",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用"
+    },
+    {
+      "term": "MIME",
+      "meaning": "メールなどでテキスト以外のデータ（画像・音声など）を送るための規格",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用"
+    },
+    {
+      "term": "VoIP",
+      "meaning": "音声をIPパケット化してネットワーク上で電話を実現する技術",
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用"
+    },
+    {
+      "term": "共通鍵暗号方式",
+      "meaning": "暗号化と復号に同じ鍵を使う暗号方式。処理は速いが鍵の安全な配送が課題",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "公開鍵暗号方式",
+      "meaning": "公開鍵で暗号化し秘密鍵で復号する方式。鍵管理が容易だが処理は重い",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "電子署名（デジタル署名）",
+      "meaning": "公開鍵暗号を用い、文書の作成者と改ざんの有無を証明する署名",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "認証局（CA）",
+      "meaning": "公開鍵が正当なものであることを証明する電子証明書を発行する第三者機関",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "SSL（TLS）",
+      "meaning": "通信経路を暗号化するプロトコル。SSLはTLSの旧称",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "HTTPS",
+      "meaning": "HTTP通信をSSL/TLSで暗号化した安全な通信方式",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "ログファイル",
+      "meaning": "システムの動作やアクセスの記録を残したファイル",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "システムログ",
+      "meaning": "OSやシステムの稼働・エラーなどを記録したログ",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "アクセスログ",
+      "meaning": "誰がいつ何にアクセスしたかを記録したログ",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "インシデント",
+      "meaning": "情報漏洩や不正アクセスなど、セキュリティ上の事故・事件",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "リスクマネジメント",
+      "meaning": "情報資産のリスクを洗い出し、評価・対策・監視を継続的に行う管理活動",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "リスクアセスメント",
+      "meaning": "リスクの発生確率と影響度を分析・評価すること",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "クロスサイトスクリプティング",
+      "meaning": "脆弱なサイトに悪意あるスクリプトを埋め込み、利用者のブラウザで実行させる攻撃",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "ソーシャルエンジニアリング",
+      "meaning": "技術ではなく人の心理や油断につけ込んで機密情報を盗み出す手法",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "SQLインジェクション",
+      "meaning": "入力欄に悪意あるSQL文を紛れ込ませ、データベースを不正に操作する攻撃",
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ"
+    },
+    {
+      "term": "ブレーンストーミング",
+      "meaning": "集団で自由にアイデアを出し合う会議技法。批判禁止・質より量などのルールがある",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "KJ法",
+      "meaning": "収集した情報をカード化し、グループ化して問題の全体像を整理する手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "決定表（デシジョンテーブル）",
+      "meaning": "条件と処理（アクション）の組合せを表形式で整理したもの",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "DFD",
+      "meaning": "データの流れに着目して業務やシステムを図式化する手法（Data Flow Diagram）",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "データフロー",
+      "meaning": "DFDでデータの流れを表す矢印",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "データの源泉と吸収",
+      "meaning": "DFDでデータの発生元（源泉）と最終的な出力先（吸収）を表す要素",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "プロセス",
+      "meaning": "DFDでデータを加工・変換する処理を表す要素",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "データストア",
+      "meaning": "DFDでデータを蓄積する場所を表す要素",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "パート図（PERT）",
+      "meaning": "作業の順序と所要日数を矢印で結んだ日程計画の図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "アローダイアグラム",
+      "meaning": "PERT図を矢印と結合点で描いた工程管理図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "クリティカルパス",
+      "meaning": "工程の中で所要日数が最も長く、全体の日程を左右する経路",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "ABC分析",
+      "meaning": "売上高などの大きい順に項目を並べ、累計比率でA・B・Cに区分して重点管理する分析",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "パレート図",
+      "meaning": "項目を大きい順に棒グラフで並べ、累計折れ線を重ねた図。ABC分析に用いる",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "Zグラフ",
+      "meaning": "月別売上・累計売上・移動合計の3本を描き、売上傾向を分析する図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "回帰分析",
+      "meaning": "2つの変数の関係を直線（回帰直線）で表し、予測に用いる分析手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "散布図",
+      "meaning": "2つの変数の組を点として打ち、相関を視覚化した図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "正の相関",
+      "meaning": "一方が増えると他方も増える関係。散布図では右肩上がり",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "負の相関",
+      "meaning": "一方が増えると他方が減る関係。散布図では右肩下がり",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "回帰直線（近似曲線）",
+      "meaning": "散布図の点群の傾向を表す直線。最小二乗法などで求める",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "線形計画法",
+      "meaning": "制約条件を一次不等式で表し、目的関数を最大化・最小化する解を求める手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "ヒストグラム",
+      "meaning": "データを度数分布で区切り柱状に表した図。ばらつきの把握に用いる",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "特性要因図",
+      "meaning": "結果（特性）と原因（要因）の関係を魚の骨状に整理した図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "ファンチャート",
+      "meaning": "ある数値が構成要素の和で表されるとき、全体と部分の関係を階層的に示す図",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "SWOT分析",
+      "meaning": "内部の強み・弱みと外部の機会・脅威の4要素で経営環境を分析する手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "内的要因（強み・弱み）",
+      "meaning": "SWOT分析で自社内部の有利な点（強み）と不利な点（弱み）",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "外的要因（機会・脅威）",
+      "meaning": "SWOT分析で外部環境の追い風（機会）と逆風（脅威）",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "PPM分析",
+      "meaning": "市場成長率と市場占有率で事業を花形・金のなる木・問題児・負け犬に分類する手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法"
+    },
+    {
+      "term": "コンプライアンス",
+      "meaning": "法令や社会規範、企業倫理を遵守すること",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "セキュリティポリシー",
+      "meaning": "組織の情報セキュリティに関する基本方針・行動指針を定めた文書",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "ERP（経営資源計画）",
+      "meaning": "人・物・金・情報の経営資源を統合的に管理し最適配分する考え方・システム",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "CRM（顧客関係管理）",
+      "meaning": "顧客情報を一元管理し、顧客との関係を強化して満足度・収益を高める手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "BPR（業務プロセス再設計）",
+      "meaning": "既存業務の流れを根本から見直し再設計する改革手法",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "コアコンピタンス",
+      "meaning": "他社が真似できない、企業の中核となる競争力の源泉",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "アウトソーシング",
+      "meaning": "業務の一部を外部の専門企業に委託すること",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "アライアンス",
+      "meaning": "企業同士が協力・提携して事業を行うこと",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "ハウジングサービス",
+      "meaning": "自社のサーバをデータセンタに預けて運用してもらうサービス",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "ホスティングサービス",
+      "meaning": "事業者のサーバを間借りしてWebサイトなどを運用するサービス",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "ASP",
+      "meaning": "ネットワーク経由でアプリケーション機能を提供するサービス形態（Application Service Provider）",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "SaaS",
+      "meaning": "ソフトウェアをネットワーク経由のサービスとして提供する形態",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "PaaS",
+      "meaning": "アプリケーション開発・実行の基盤（OS・ミドルウェアなど）をサービスとして提供する形態",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "IaaS",
+      "meaning": "サーバ・ストレージなどのIT基盤をサービスとして提供する形態",
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "経営計画と管理"
+    },
+    {
+      "term": "CEILING",
+      "meaning": "数値を指定した基準値の倍数に切り上げる関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学/三角）"
+    },
+    {
+      "term": "FLOOR",
+      "meaning": "数値を指定した基準値の倍数に切り捨てる関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学/三角）"
+    },
+    {
+      "term": "ABS",
+      "meaning": "数値の絶対値を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学/三角）"
+    },
+    {
+      "term": "RANDBETWEEN",
+      "meaning": "指定した範囲の整数の乱数を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学/三角）"
+    },
+    {
+      "term": "FORECAST",
+      "meaning": "既存データの傾向から将来の値を予測（線形回帰）する関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）"
+    },
+    {
+      "term": "MEDIAN",
+      "meaning": "数値の中央値を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）"
+    },
+    {
+      "term": "MODE",
+      "meaning": "最頻値（最も多く出現する値）を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）"
+    },
+    {
+      "term": "OFFSET",
+      "meaning": "基準セルから指定した行・列だけ離れた位置のセル参照を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（検索/行列）"
+    },
+    {
+      "term": "ROW",
+      "meaning": "セルの行番号を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（検索/行列）"
+    },
+    {
+      "term": "COLUMN",
+      "meaning": "セルの列番号を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（検索/行列）"
+    },
+    {
+      "term": "DSUM",
+      "meaning": "データベース内で条件に合うレコードの指定列の合計を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "DAVERAGE",
+      "meaning": "条件に合うレコードの指定列の平均を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "DMAX",
+      "meaning": "条件に合うレコードの指定列の最大値を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "DMIN",
+      "meaning": "条件に合うレコードの指定列の最小値を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "DCOUNT",
+      "meaning": "条件に合うレコードのうち数値が入ったセルの個数を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "DCOUNTA",
+      "meaning": "条件に合うレコードのうち空白でないセルの個数を求める関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（データベース）"
+    },
+    {
+      "term": "SUBSTITUTE",
+      "meaning": "文字列中の指定した文字を別の文字に置き換える関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（文字列操作）"
+    },
+    {
+      "term": "IFERROR",
+      "meaning": "数式がエラーの場合に指定した値を返し、正常なら計算結果を返す関数",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（論理）"
+    },
+    {
+      "term": "最適解（ソルバー）",
+      "meaning": "制約条件を満たしながら目標値を最大化・最小化する変数の値を自動で求める機能",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "応用機能"
+    },
+    {
+      "term": "手続きの自動化（マクロ機能）",
+      "meaning": "一連の操作を記録・プログラム化して自動実行する機能",
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "応用機能"
+    },
+    {
+      "term": "DBMS",
+      "meaning": "データベースを統合的に管理するソフトウェア（データベース管理システム）",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "排他制御",
+      "meaning": "複数の利用者が同時にデータを更新しても整合性を保つための制御",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "ロック",
+      "meaning": "処理中のデータを他のトランザクションから変更できないよう施錠する仕組み",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "共有ロック",
+      "meaning": "読み取りは許すが書き込みを禁止するロック",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "専有ロック",
+      "meaning": "読み取りも書き込みも他のトランザクションに禁止するロック",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "デッドロック",
+      "meaning": "複数のトランザクションが互いのロック解除を待ち、処理が進まなくなる状態",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "トランザクション",
+      "meaning": "データベースへの一連の処理を1つの作業単位として扱う仕組み",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "コミット",
+      "meaning": "トランザクションの処理結果を確定して反映させること",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "ジャーナルファイル",
+      "meaning": "データベースへの更新履歴を記録したファイル（ログファイル）",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "チェックポイント",
+      "meaning": "メモリ上のデータをディスクに書き出す同期の基準点",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "ロールバック",
+      "meaning": "障害時にジャーナルを使い処理前の状態へ巻き戻す回復",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "ロールフォワード",
+      "meaning": "バックアップとジャーナルを使い障害直前の状態へ進める回復",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS"
+    },
+    {
+      "term": "概念設計",
+      "meaning": "業務のデータをE-R図などでモデル化する設計段階",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "論理設計",
+      "meaning": "概念モデルをDBMSで扱える表構造（リレーション）に落とし込む設計段階",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "物理設計",
+      "meaning": "実際の記憶装置への格納方法やアクセス経路を決める設計段階",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "非正規形",
+      "meaning": "繰り返し項目などが残り、正規化されていない表の形",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "正規化（第1〜第3）",
+      "meaning": "表を分割して重複や更新矛盾を排除する設計手法。第1は繰返し排除、第2は部分関数従属の排除、第3は推移的関数従属の排除",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "E-R図",
+      "meaning": "実体（エンティティ）と関連（リレーションシップ）でデータモデルを表す図",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "エンティティ（実体）",
+      "meaning": "管理対象となるモノや概念。E-R図の要素",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "アトリビュート（属性）",
+      "meaning": "エンティティが持つ性質・項目",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "リレーションシップ（関係）",
+      "meaning": "エンティティ同士の関連",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "整合性制約（参照整合性）",
+      "meaning": "外部キーが参照先の主キーと矛盾しないよう保つ制約",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計"
+    },
+    {
+      "term": "INSERT INTO 〜 VALUES 〜",
+      "meaning": "表にレコードを追加するSQL文",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "UPDATE 〜 SET 〜 WHERE 〜",
+      "meaning": "条件に合うレコードの値を更新するSQL文",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "DELETE FROM 〜 WHERE 〜",
+      "meaning": "条件に合うレコードを削除するSQL文",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "表名の別名指定",
+      "meaning": "表に短い別名（AS）を付けて問合せを簡潔にする指定",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "DISTINCT",
+      "meaning": "重複行を除いて結果を取得するキーワード",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "LIKE（ワイルドカード % _）",
+      "meaning": "パターン一致で検索する演算子。%は任意の文字列、_は任意の1文字",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "ORDER BY（ASC / DESC）",
+      "meaning": "結果を昇順（ASC）・降順（DESC）に並べ替える句",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "GROUP BY（HAVING）",
+      "meaning": "行をグループ化して集計する句。HAVINGで集計後の条件を指定する",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "BETWEEN",
+      "meaning": "値が指定した範囲内にあるかを判定する演算子",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "IN（NOT IN）",
+      "meaning": "値がリストのいずれかに含まれるか（含まれないか）を判定する演算子",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "副問合せ",
+      "meaning": "SELECT文の中に別のSELECT文を入れ子にする問合せ",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    },
+    {
+      "term": "EXISTS（NOT EXISTS）",
+      "meaning": "副問合せの結果が存在するか（しないか）を判定する演算子",
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL"
+    }
+  ]
+}
