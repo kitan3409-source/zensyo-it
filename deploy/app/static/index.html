@@ -5,115 +5,146 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>情報処理1級 4択クイズ</title>
 <style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #273549;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --correct: #22c55e;
+    --wrong: #ef4444;
+    --border: #334155;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background: #f0ebf8;
-    color: #202124;
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     padding: 16px;
   }
-  .wrap { width: 100%; max-width: 680px; }
+  .container { width: 100%; max-width: 720px; }
+  header { text-align: center; margin-bottom: 14px; }
+  header h1 { font-size: 1.35rem; margin-bottom: 4px; }
+  header .sub { color: var(--muted); font-size: 0.8rem; }
   .card {
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid #dadce0;
-    padding: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
     margin-bottom: 14px;
   }
-  .card.title-card { border-top: 8px solid #673ab7; }
-  h1 { font-size: 1.5rem; margin-bottom: 6px; }
-  .sub { color: #5f6368; font-size: 0.85rem; line-height: 1.6; }
-  label { display: block; font-size: 0.85rem; color: #5f6368; margin: 14px 0 5px; }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin: 12px 0 4px; }
   input[type=text], select {
     width: 100%;
-    padding: 10px 12px;
+    padding: 9px 12px;
     font-size: 0.95rem;
-    border: 1px solid #dadce0;
-    border-radius: 6px;
-    background: #fff;
+    background: var(--card2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
   }
-  input[type=text]:focus, select:focus { outline: none; border-color: #673ab7; box-shadow: 0 0 0 2px #d2c6f0; }
-  .row { display: flex; gap: 12px; }
+  input[type=text]:focus, select:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
   .btn {
-    background: #673ab7;
-    color: #fff;
+    background: var(--accent);
+    color: #082f49;
     border: none;
-    border-radius: 6px;
-    padding: 11px 26px;
+    border-radius: 8px;
+    padding: 11px 24px;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    margin-top: 18px;
+    margin-top: 16px;
   }
-  .btn:hover { background: #5e35b1; }
-  .btn.secondary { background: #fff; color: #673ab7; border: 1px solid #dadce0; }
-  .btn.secondary:hover { background: #f6f1fd; }
-  .progress {
-    height: 8px;
-    background: #e2d9f3;
-    border-radius: 999px;
-    overflow: hidden;
-    margin-bottom: 14px;
+  .btn:hover { background: #7dd3fc; }
+  .btn.ghost { background: var(--card2); color: var(--text); border: 1px solid var(--border); font-weight: 400; }
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
   }
-  .progress > div { height: 100%; background: #673ab7; width: 0; transition: width .2s; }
-  .qnum { font-size: 0.8rem; color: #5f6368; margin-bottom: 4px; }
-  .qbadge {
+  .stats b { color: var(--text); }
+  .progress { height: 6px; background: var(--card2); border-radius: 999px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .q-badge {
     display: inline-block;
     font-size: 0.75rem;
-    padding: 3px 10px;
+    padding: 4px 10px;
     border-radius: 999px;
-    background: #ede4fa;
-    color: #673ab7;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
     margin-bottom: 10px;
   }
-  .prompt { font-size: 1.1rem; line-height: 1.7; margin-bottom: 18px; word-break: break-word; }
-  .prompt.term { font-weight: 700; font-size: 1.3rem; color: #4527a0; }
-  .choices { display: grid; gap: 8px; }
+  .q-meta { color: var(--muted); font-size: 0.75rem; margin-bottom: 10px; }
+  .prompt { font-size: 1.15rem; line-height: 1.7; margin-bottom: 20px; word-break: break-word; }
+  .prompt.term { font-weight: 700; font-size: 1.4rem; color: var(--accent); }
+  .choices { display: grid; gap: 10px; }
   .choice {
     text-align: left;
-    background: #fff;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    padding: 12px 14px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    color: var(--text);
     font-size: 0.95rem;
     line-height: 1.5;
     cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
     display: flex;
     gap: 10px;
     align-items: flex-start;
   }
-  .choice:hover:not(:disabled) { border-color: #673ab7; background: #f6f1fd; }
   .choice .num {
-    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-    border: 2px solid #80868b;
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--border);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.72rem; font-weight: 700; color: #5f6368;
+    font-size: 0.75rem; font-weight: 700;
   }
-  .choice:disabled { cursor: default; }
-  .choice.correct { border-color: #188038; background: #e6f4ea; }
-  .choice.correct .num { border-color: #188038; background: #188038; color: #fff; }
-  .choice.wrong { border-color: #d93025; background: #fce8e6; }
-  .choice.wrong .num { border-color: #d93025; background: #d93025; color: #fff; }
-  .feedback { margin-top: 12px; font-size: 0.9rem; display: none; padding: 10px 12px; border-radius: 6px; }
+  .choice:hover:not(:disabled) { border-color: var(--accent); }
+  .choice:disabled { cursor: default; opacity: 0.85; }
+  .choice.correct { border-color: var(--correct); background: rgba(34, 197, 94, 0.15); }
+  .choice.correct .num { background: var(--correct); color: #052e16; }
+  .choice.wrong { border-color: var(--wrong); background: rgba(239, 68, 68, 0.15); }
+  .choice.wrong .num { background: var(--wrong); color: #450a0a; }
+  .feedback {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    display: none;
+  }
   .feedback.show { display: block; }
-  .feedback.ok { background: #e6f4ea; color: #137333; }
-  .feedback.ng { background: #fce8e6; color: #c5221f; }
-  .nav { display: flex; justify-content: flex-end; }
-  .score { text-align: center; padding: 30px 0 10px; }
-  .score .big { font-size: 3rem; font-weight: 700; color: #673ab7; }
-  .err { color: #d93025; font-size: 0.85rem; margin-top: 8px; display: none; }
-  .hint { text-align: center; color: #5f6368; font-size: 0.75rem; margin: 8px 0 20px; }
+  .feedback.ok { background: rgba(34, 197, 94, 0.12); border: 1px solid var(--correct); }
+  .feedback.ng { background: rgba(239, 68, 68, 0.12); border: 1px solid var(--wrong); }
+  .feedback .label { font-weight: 700; margin-right: 8px; }
+  .nav { margin-top: 14px; display: none; justify-content: flex-end; }
+  .nav.show { display: flex; }
+  .err { color: var(--wrong); font-size: 0.85rem; margin-top: 8px; display: none; }
+  .hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+  .score { text-align: center; padding: 24px 0 8px; }
+  .score .big { font-size: 3rem; font-weight: 700; color: var(--accent); margin: 10px 0; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card title-card" id="startCard">
+<div class="container">
+  <header>
     <h1>情報処理1級 4択クイズ</h1>
-    <div class="sub">全商 情報処理検定1級（共通＋ビジネス情報 全<span id="totalTerms">?</span>語）<br>名前を入力してスタート。回答は先生のダッシュボードに記録されます。</div>
+    <div class="sub">全商 共通範囲＋ビジネス情報部門 全<span id="totalTerms">?</span>語 ｜ 回答は先生のダッシュボードに記録されます</div>
+  </header>
+
+  <div class="card" id="startCard">
     <label for="nameInput">名前</label>
     <input type="text" id="nameInput" placeholder="例：商業3年A組 田中" maxlength="50">
     <div class="row">
@@ -136,25 +167,30 @@
   </div>
 
   <div id="quizArea" style="display:none">
+    <div class="stats">
+      <span>正解 <b id="statCorrect">0</b>/<b id="statTotal">0</b></span>
+      <span>正答率 <b id="statRate">-</b></span>
+      <span>連続正解 <b id="statStreak">0</b></span>
+    </div>
     <div class="progress"><div id="bar"></div></div>
     <div class="card">
-      <div class="qnum" id="qNum"></div>
-      <span class="qbadge" id="qBadge"></span>
+      <div class="q-meta" id="qNum"></div>
+      <span class="q-badge" id="qBadge"></span>
       <div class="prompt" id="qPrompt"></div>
       <div class="choices" id="choices"></div>
       <div class="feedback" id="feedback"></div>
-      <div class="nav"><button class="btn" id="nextBtn" style="display:none">次へ</button></div>
+      <div class="nav" id="nextRow"><button class="btn" id="nextBtn">次の問題 →</button></div>
     </div>
-    <div class="hint">キーボード 1〜4 でも答えられます</div>
+    <div class="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
   </div>
 
   <div class="card" id="scoreCard" style="display:none">
     <div class="score">
       <div>お疲れさまでした！</div>
       <div class="big"><span id="scoreNum">0</span>点</div>
-      <div class="sub" id="scoreDetail"></div>
+      <div class="sub" id="scoreDetail" style="color:var(--muted)"></div>
       <button class="btn" id="againBtn">もう一度</button>
-      <button class="btn secondary" id="backBtn">設定に戻る</button>
+      <button class="btn ghost" id="backBtn">設定に戻る</button>
     </div>
   </div>
 </div>
@@ -199,10 +235,11 @@ function startQuiz() {
   localStorage.setItem('quiz-name', name);
   const p = shuffle(pool());
   const n = $('countSel').value === 'all' ? p.length : Math.min(parseInt($('countSel').value), p.length);
-  session = { name, qs: p.slice(0, n), idx: 0, correct: 0 };
+  session = { name, qs: p.slice(0, n), idx: 0, correct: 0, streak: 0 };
   $('startCard').style.display = 'none';
   $('scoreCard').style.display = 'none';
   $('quizArea').style.display = 'block';
+  $('statTotal').textContent = session.qs.length;
   showQuestion();
 }
 
@@ -211,9 +248,9 @@ function showQuestion() {
   const t = session.qs[session.idx];
   const t2m = Math.random() < 0.5;
   const key = t2m ? 'meaning' : 'term';
-  const same = shuffle(session.qs.filter(x => x.term !== t.term && x.category === t.category));
+  const same = shuffle(TERMS.filter(x => x.term !== t.term && x.category === t.category));
   const others = shuffle(TERMS.filter(x => x.term !== t.term && x.category !== t.category));
-  const poolArr = same.concat(others).concat(shuffle(session.qs.filter(x => x.term !== t.term)));
+  const poolArr = same.concat(others);
   const distractors = [];
   for (const x of poolArr) {
     if (distractors.length >= 3) break;
@@ -223,7 +260,7 @@ function showQuestion() {
   session.current = { t, t2m, key, choices };
 
   $('bar').style.width = (session.idx / session.qs.length * 100) + '%';
-  $('qNum').textContent = `問題 ${session.idx + 1} / ${session.qs.length}`;
+  $('qNum').textContent = `問題 ${session.idx + 1} / ${session.qs.length} ｜ ${t.department} ／ ${t.category}`;
   $('qBadge').textContent = t2m ? 'この用語の意味は？' : 'この意味の用語は？';
   const pr = $('qPrompt');
   pr.textContent = t2m ? t.term : t.meaning;
@@ -240,7 +277,7 @@ function showQuestion() {
   });
   $('feedback').className = 'feedback';
   $('feedback').textContent = '';
-  $('nextBtn').style.display = 'none';
+  $('nextRow').classList.remove('show');
 }
 
 async function answer(i) {
@@ -248,7 +285,7 @@ async function answer(i) {
   answered = true;
   const { t, t2m, key, choices } = session.current;
   const correct = choices[i] === t[key];
-  if (correct) session.correct++;
+  if (correct) { session.correct++; session.streak++; } else { session.streak = 0; }
 
   [...$('choices').children].forEach((b, j) => {
     b.disabled = true;
@@ -257,10 +294,13 @@ async function answer(i) {
   });
   const fb = $('feedback');
   fb.className = 'feedback show ' + (correct ? 'ok' : 'ng');
-  fb.textContent = correct ? '正解！' : '不正解… 正解は「' + t[key] + '」';
-  $('nextBtn').style.display = 'inline-block';
-  $('nextBtn').textContent = session.idx + 1 >= session.qs.length ? '結果を見る' : '次へ';
+  fb.innerHTML = correct
+    ? '<span class="label">正解！</span>'
+    : '<span class="label">不正解…</span>正解は「' + esc(t[key]) + '」';
+  $('nextRow').classList.add('show');
+  $('nextBtn').textContent = session.idx + 1 >= session.qs.length ? '結果を見る' : '次の問題 →';
   $('bar').style.width = ((session.idx + 1) / session.qs.length * 100) + '%';
+  updateStats();
 
   try {
     await fetch('/api/answer', {
@@ -274,6 +314,15 @@ async function answer(i) {
       })
     });
   } catch (e) { /* 記録失敗しても進める */ }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function updateStats() {
+  $('statCorrect').textContent = session.correct;
+  const done = session.idx + (answered ? 1 : 0);
+  $('statRate').textContent = done ? Math.round(session.correct / done * 100) + '%' : '-';
+  $('statStreak').textContent = session.streak;
 }
 
 function next() {
@@ -291,13 +340,20 @@ function next() {
 
 $('startBtn').onclick = startQuiz;
 $('nextBtn').onclick = next;
-$('againBtn').onclick = () => { session.qs = shuffle(pool()).slice(0, session.qs.length); session.idx = 0; session.correct = 0; $('scoreCard').style.display = 'none'; $('quizArea').style.display = 'block'; showQuestion(); };
+$('againBtn').onclick = () => {
+  session.qs = shuffle(pool()).slice(0, session.qs.length);
+  session.idx = 0; session.correct = 0; session.streak = 0;
+  updateStats();
+  $('scoreCard').style.display = 'none';
+  $('quizArea').style.display = 'block';
+  showQuestion();
+};
 $('backBtn').onclick = () => { $('scoreCard').style.display = 'none'; $('startCard').style.display = 'block'; };
 document.addEventListener('keydown', (e) => {
   if ($('quizArea').style.display !== 'none' && !answered && ['1','2','3','4'].includes(e.key)) {
     const i = Number(e.key) - 1;
     if ($('choices').children[i]) answer(i);
-  } else if (answered && e.key === 'Enter' && $('nextBtn').style.display !== 'none') {
+  } else if (answered && e.key === 'Enter' && $('nextRow').classList.contains('show')) {
     next();
   }
 });
