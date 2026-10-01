@@ -1,10 +1,26 @@
 # 公開URLを自分で立てる方法
 
-## A. Cloudflare Workers + D1（推奨・無料・常時起動）
+## A. Cloudflare（推奨・無料・常時起動）
 
-`worker/` ディレクトリ版。静的ページ＋API＋DB（D1）を1つの `workers.dev` URLで公開。
+Pages版（`pages/`、pages.dev URL）とWorkers版（`worker/`、workers.dev URL）の
+2つを用意。中身は同じで、使いやすい方を選んでください。
 
-### A-1. GitHub連携（pushで自動デプロイ）
+### A-0. Cloudflare Pages + Functions（pages.dev）
+
+1. https://dash.cloudflare.com で無料アカウント作成
+2. Workers & Pages → Create → Pages → 「Connect to Git」→ GitHub連携 →
+   `kitan3409-source/zensyo-it` 選択
+3. ビルド設定: Framework preset `None`、Root directory `pages`
+   （Build command・出力ディレクトリは空欄でOK）
+4. 左メニュー D1 → Create database `zensho-quiz-db`
+   → Console で `worker/schema.sql` の中身を実行（テーブル作成）
+5. Pages プロジェクトの Settings → Bindings → Add → D1 database
+   → Variable name `DB` に `zensho-quiz-db` を割り当て
+6. 再 Deploy → `https://zensyo-it.pages.dev` が公開URL
+
+`pages/functions/` が自動で API になります（/api/answer, /api/stats）。
+
+### A-1. Workers GitHub連携（pushで自動デプロイ）
 
 1. https://dash.cloudflare.com で無料アカウント作成
 2. Workers & Pages → Create → 「Import a repository」→ GitHub連携 →
