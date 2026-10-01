@@ -6,7 +6,5 @@ compatibility_date = "2025-09-01"
 directory = "./static"
 binding = "ASSETS"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "zensho-quiz-db"
-database_id = "REPLACE_ME"
+# D1バインドはダッシュボード(Settings→Bindings→Variable name "DB")か
+# deploy.sh 実行時に自動追記されます

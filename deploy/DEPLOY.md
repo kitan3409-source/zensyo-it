@@ -4,13 +4,31 @@
 
 `worker/` ディレクトリ版。静的ページ＋API＋DB（D1）を1つの `workers.dev` URLで公開。
 
+### A-1. GitHub連携（pushで自動デプロイ）
+
+1. https://dash.cloudflare.com で無料アカウント作成
+2. Workers & Pages → Create → 「Import a repository」→ GitHub連携 →
+   `kitan3409-source/zensyo-it` 選択 → ルートディレクトリ `worker`、最初は Deploy せず
+3. ダッシュボード左メニュー「D1」→ Create database `zensho-quiz-db`
+   → Console で `worker/schema.sql` の内容を実行（テーブル作成）
+4. 作成した Worker の Settings → Bindings → Add → D1 database
+   → Variable name `DB` に `zensho-quiz-db` を割り当て
+5. 再 Deploy → `https://zensho-quiz.<サブドメイン>.workers.dev` が公開URL
+
+以後、GitHubにpushするだけで自動で再デプロイされます。
+
+### A-2. CLI（wrangler）でデプロイ
+
 1. https://dash.cloudflare.com で無料アカウント作成
 2. `cd worker && npx wrangler login`（ブラウザが開いて承認）
 3. `./deploy.sh` を実行（D1作成→テーブル作成→デプロイまで自動）
-4. `https://zensho-quiz.<アカウント名>.workers.dev` が公開URL
+4. `https://zensho-quiz.<サブドメイン>.workers.dev` が公開URL
+
+### 共通
 
 - 生徒用: `/`、先生用: `/teacher`（初期パスワード `sensei`）
-- 先生パスワード変更: `npx wrangler secret put TEACHER_PW`
+- 先生パスワード変更: Worker の Settings → Variables → `TEACHER_PW` を追加
+  （CLIの場合: `npx wrangler secret put TEACHER_PW`）
 - 無料枠: Workers 10万req/日、D1 500万read/日・10万write/日 — クラス全員で使っても余裕
 - データは消えません（D1は永続DB）
 
