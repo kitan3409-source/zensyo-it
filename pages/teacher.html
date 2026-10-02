@@ -115,6 +115,13 @@ async function load() {
     $('dashArea').style.display = 'none';
     return;
   }
+  if (!res.ok) {
+    $('pwErr').textContent = `取得に失敗しました（${res.status}）— D1データベースの作成・バインドを確認してください`;
+    $('pwErr').style.display = 'block';
+    $('loginCard').style.display = 'block';
+    $('dashArea').style.display = 'none';
+    return;
+  }
   const d = await res.json();
   $('loginCard').style.display = 'none';
   $('dashArea').style.display = 'block';
@@ -146,6 +153,7 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 $('loginBtn').onclick = () => {
   pw = $('pwInput').value;
   sessionStorage.setItem('teacher-pw', pw);
+  $('pwErr').textContent = 'パスワードが違います';
   $('pwErr').style.display = 'none';
   load();
 };
