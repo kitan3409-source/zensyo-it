@@ -11,17 +11,22 @@ export default {
       }
       const student = String(b.student || "").trim().slice(0, 50);
       if (!student) return json({ error: "student is required" }, 400);
-      await env.DB.prepare(
-        "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
-      )
-        .bind(
-          student,
-          String(b.term || "").slice(0, 200),
-          String(b.direction || "").slice(0, 10),
-          b.correct ? 1 : 0,
-          Date.now() / 1000
+      if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
+      try {
+        await env.DB.prepare(
+          "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
         )
-        .run();
+          .bind(
+            student,
+            String(b.term || "").slice(0, 200),
+            String(b.direction || "").slice(0, 10),
+            b.correct ? 1 : 0,
+            Date.now() / 1000
+          )
+          .run();
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
       return json({ ok: true });
     }
 
@@ -29,12 +34,18 @@ export default {
       if ((url.searchParams.get("pw") || "") !== (env.TEACHER_PW || "sensei")) {
         return json({ error: "forbidden" }, 403);
       }
-      const students = await env.DB.prepare(
-        "SELECT student, COUNT(*) AS answered, SUM(correct) AS correct, MAX(ts) AS last_ts FROM answers GROUP BY student ORDER BY last_ts DESC"
-      ).all();
-      const terms = await env.DB.prepare(
-        "SELECT term, COUNT(*) AS answered, SUM(correct) AS correct FROM answers GROUP BY term ORDER BY CAST(SUM(correct) AS REAL)/COUNT(*) ASC"
-      ).all();
+      if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
+      let students, terms;
+      try {
+        students = await env.DB.prepare(
+          "SELECT student, COUNT(*) AS answered, SUM(correct) AS correct, MAX(ts) AS last_ts FROM answers GROUP BY student ORDER BY last_ts DESC"
+        ).all();
+        terms = await env.DB.prepare(
+          "SELECT term, COUNT(*) AS answered, SUM(correct) AS correct FROM answers GROUP BY term ORDER BY CAST(SUM(correct) AS REAL)/COUNT(*) ASC"
+        ).all();
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
       const rate = (r) => (r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0);
       return json({
         students: students.results.map((r) => ({
