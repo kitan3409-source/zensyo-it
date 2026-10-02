@@ -5,55 +5,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>先生用ダッシュボード — 情報処理1級クイズ</title>
 <style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #273549;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --correct: #22c55e;
+    --mid: #f59e0b;
+    --wrong: #ef4444;
+    --border: #334155;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background: #f0ebf8;
-    color: #202124;
+    background: var(--bg);
+    color: var(--text);
     padding: 16px;
   }
   .wrap { max-width: 900px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 14px; }
+  header h1 { font-size: 1.35rem; margin-bottom: 4px; }
   .card {
-    background: #fff;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
     padding: 22px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-  .card.title-card { border-top: 8px solid #673ab7; }
-  h1 { font-size: 1.4rem; margin-bottom: 4px; }
-  .sub { color: #5f6368; font-size: 0.85rem; }
+  .sub { color: var(--muted); font-size: 0.85rem; }
   input[type=password] {
     width: 100%; max-width: 320px;
     padding: 10px 12px; font-size: 0.95rem;
-    border: 1px solid #dadce0; border-radius: 6px; margin-top: 14px;
+    background: var(--card2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; margin-top: 14px;
   }
+  input[type=password]:focus { outline: none; border-color: var(--accent); }
   .btn {
-    background: #673ab7; color: #fff; border: none; border-radius: 6px;
+    background: var(--accent); color: #082f49; border: none; border-radius: 8px;
     padding: 11px 22px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 12px;
   }
-  .btn:hover { background: #5e35b1; }
-  .err { color: #d93025; font-size: 0.85rem; margin-top: 8px; display: none; }
+  .btn:hover { background: #7dd3fc; }
+  .err { color: var(--wrong); font-size: 0.85rem; margin-top: 8px; display: none; }
   h2 { font-size: 1.05rem; margin-bottom: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
-  th { color: #5f6368; font-size: 0.78rem; font-weight: 600; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-size: 0.78rem; font-weight: 600; }
   .rate { font-weight: 700; }
-  .rate.good { color: #188038; }
-  .rate.mid { color: #e8710a; }
-  .rate.bad { color: #d93025; }
+  .rate.good { color: var(--correct); }
+  .rate.mid { color: var(--mid); }
+  .rate.bad { color: var(--wrong); }
   .bar-cell { min-width: 90px; }
-  .mini { height: 8px; background: #eee; border-radius: 999px; overflow: hidden; }
-  .mini > div { height: 100%; background: #673ab7; }
-  .refreshed { font-size: 0.75rem; color: #5f6368; text-align: right; }
-  .empty { color: #5f6368; font-size: 0.9rem; padding: 14px 0; }
+  .mini { height: 8px; background: var(--card2); border-radius: 999px; overflow: hidden; }
+  .mini > div { height: 100%; background: var(--accent); }
+  .refreshed { font-size: 0.75rem; color: var(--muted); text-align: right; }
+  .empty { color: var(--muted); font-size: 0.9rem; padding: 14px 0; }
   #dashArea { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="card title-card" id="loginCard">
-    <h1>先生用ダッシュボード</h1>
+  <header><h1>先生用ダッシュボード</h1></header>
+  <div class="card" id="loginCard">
     <div class="sub">生徒の回答状況を確認できます。パスワードを入力してください。</div>
     <input type="password" id="pwInput" placeholder="パスワード">
     <div class="err" id="pwErr">パスワードが違います</div>
@@ -64,7 +78,7 @@
     <div class="card">
       <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
       <table>
-        <thead><tr><th>名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>最終回答</th></tr></thead>
+        <thead><tr><th>クラス 番号 名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>最終回答</th></tr></thead>
         <tbody id="studentRows"></tbody>
       </table>
       <div class="empty" id="noStudents">まだ回答がありません</div>

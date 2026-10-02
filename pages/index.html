@@ -41,7 +41,7 @@
   .controls {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   .controls input[type=text], .controls select {
     padding: 7px 10px;
@@ -149,7 +149,11 @@
   </header>
 
   <div class="controls">
-    <input type="text" id="nameInput" placeholder="名前（記録用）" maxlength="50">
+    <input type="text" id="clsInput" placeholder="クラス 例：3A" maxlength="20">
+    <input type="text" id="numInput" placeholder="番号" maxlength="10" inputmode="numeric">
+    <input type="text" id="nameInput" placeholder="名前" maxlength="50">
+  </div>
+  <div class="controls">
     <select id="scopeSel" title="出題範囲"></select>
     <select id="countSel" title="問題数">
       <option value="10">10問</option>
@@ -268,17 +272,23 @@ function showQuestion() {
   $('nextRow').classList.remove('show');
 }
 
+function studentId() {
+  const cls = $('clsInput').value.trim();
+  const num = $('numInput').value.trim();
+  const name = $('nameInput').value.trim();
+  return [cls, num, name].filter(Boolean).join(' ');
+}
+
 async function answer(i) {
   if (answered) return;
-  const name = $('nameInput').value.trim();
-  if (!name) {
-    $('nameInput').classList.add('need');
-    $('nameInput').placeholder = '← 先に名前を入力してね';
-    $('nameInput').focus();
-    return;
+  let missing = null;
+  for (const id of ['clsInput', 'numInput', 'nameInput']) {
+    if (!$(id).value.trim()) { $(id).classList.add('need'); missing = missing || $(id); }
+    else $(id).classList.remove('need');
   }
-  $('nameInput').classList.remove('need');
-  localStorage.setItem('quiz-name', name);
+  if (missing) { missing.focus(); return; }
+  const name = studentId();
+  ['cls', 'num', 'name'].forEach(k => localStorage.setItem('quiz-' + k, $(k + 'Input').value.trim()));
   answered = true;
   const { t, t2m, key, choices } = session.current;
   const correct = choices[i] === t[key];
@@ -341,7 +351,7 @@ $('againBtn').onclick = () => { $('hint').style.display = 'block'; startQuiz(); 
 $('scopeSel').onchange = startQuiz;
 $('countSel').onchange = startQuiz;
 document.addEventListener('keydown', (e) => {
-  if (document.activeElement === $('nameInput')) return;
+  if (['clsInput', 'numInput', 'nameInput'].includes(document.activeElement.id)) return;
   if ($('quizCard').style.display !== 'none' && !answered && ['1','2','3','4'].includes(e.key)) {
     const i = Number(e.key) - 1;
     if ($('choices').children[i]) answer(i);
@@ -350,8 +360,10 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-const saved = localStorage.getItem('quiz-name');
-if (saved) $('nameInput').value = saved;
+['cls', 'num', 'name'].forEach(k => {
+  const v = localStorage.getItem('quiz-' + k);
+  if (v) $(k + 'Input').value = v;
+});
 </script>
 </body>
 </html>
