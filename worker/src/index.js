@@ -40,47 +40,54 @@ export default {
       const today = todayJST();
       let bonus = 0;
       if (u.last_login !== today) {
-        bonus = 30;
+        const y = new Date(Date.now() + 9 * 3600e3 - 86400e3).toISOString().slice(0, 10);
+        const streak = u.last_login === y ? (u.login_streak || 0) + 1 : 1;
+        bonus = 30 + Math.min(streak * 5, 50);
         await env.DB.prepare(
-          "UPDATE users SET last_login=?, points=points+30 WHERE email=?"
-        ).bind(today, sess.email).run();
-        u.points = (u.points || 0) + 30;
+          "UPDATE users SET last_login=?, login_streak=?, points=points+? WHERE email=?"
+        ).bind(today, streak, bonus, sess.email).run();
+        u.points = (u.points || 0) + bonus;
         u.last_login = today;
+        u.login_streak = streak;
+        await grantAch(env, sess.email, "login3", streak >= 3);
+        await grantAch(env, sess.email, "login7", streak >= 7);
       }
       const inv = await env.DB.prepare("SELECT item FROM inventory WHERE email=?").bind(sess.email).all();
       const eq = await env.DB.prepare("SELECT slot, item FROM equipped WHERE email=?").bind(sess.email).all();
       const ms = await env.DB.prepare("SELECT key, progress, claimed FROM missions WHERE email=? AND day=?").bind(sess.email, today).all();
+      const ach = await env.DB.prepare("SELECT key FROM achievements WHERE email=?").bind(sess.email).all();
       const equipped = {};
       for (const r of eq.results) equipped[r.slot] = r.item;
+      const total = await getTotal(env, sess.email);
+      const power = await getPower(env, sess.email);
       return json({
         display: `${sess.email.split("@")[0]} ${sess.name}`,
         points: u.points,
-        power: await getPower(env, sess.email),
+        power,
+        total,
+        rank: rankOf(total),
+        next_at: nextRankAt(total),
+        streak: u.login_streak || 0,
         equipped,
         inventory: inv.results.map((r) => r.item),
         missions: Object.keys(MISSIONS).map((k) => {
           const r = ms.results.find((x) => x.key === k);
-          return {
-            key: k,
-            desc: MISSIONS[k].desc,
-            goal: MISSIONS[k].goal,
-            bonus: MISSIONS[k].bonus,
-            progress: r ? r.progress : 0,
-            claimed: r ? r.claimed : 0,
-          };
+          return { key: k, desc: MISSIONS[k].desc, goal: MISSIONS[k].goal, bonus: MISSIONS[k].bonus,
+            progress: r ? r.progress : 0, claimed: r ? r.claimed : 0 };
         }),
+        achievements: ACH,
+        unlocked: ach.results.map((r) => r.key),
+        regions: await getRegions(env, sess.email),
+        boss: await getBoss(env, sess.email),
         login_bonus: bonus,
         items: ITEMS,
+        gacha: GACHA_ITEMS,
       });
     }
 
     if (url.pathname === "/api/buy" && request.method === "POST") {
-      let b;
-      try {
-        b = await request.json();
-      } catch {
-        return json({ error: "bad request" }, 400);
-      }
+      const b = await body(request);
+      if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
       if (!sess) return json({ error: "Googleログインしてください" }, 401);
       const item = ITEMS[b.item];
@@ -95,22 +102,59 @@ export default {
       }
       await env.DB.prepare("UPDATE users SET points=points-? WHERE email=?").bind(item.price, sess.email).run();
       await env.DB.prepare("INSERT INTO inventory (email, item) VALUES (?, ?)").bind(sess.email, b.item).run();
+      await grantAch(env, sess.email, "shop5", await countInv(env, sess.email) >= 5);
       return json({ ok: true, points: (u.points || 0) - item.price });
     }
 
-    if (url.pathname === "/api/equip" && request.method === "POST") {
-      let b;
-      try {
-        b = await request.json();
-      } catch {
-        return json({ error: "bad request" }, 400);
+    if (url.pathname === "/api/gacha" && request.method === "POST") {
+      const b = await body(request);
+      if (!b) return json({ error: "bad request" }, 400);
+      const sess = await verifySession(env, b.token);
+      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      const u = await getUser(env, sess.email, sess.name);
+      const COST = 100;
+      if ((u.points || 0) < COST) return json({ error: `ポイントが足りません（${COST}pt必要）` }, 400);
+      const roll = Math.random();
+      const rarity = roll < 0.6 ? "N" : roll < 0.9 ? "R" : roll < 0.99 ? "SR" : "SSR";
+      const pool = GACHA_ITEMS.filter((i) => i.rarity === rarity);
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      const owned = await env.DB.prepare(
+        "SELECT 1 AS x FROM inventory WHERE email=? AND item=?"
+      ).bind(sess.email, item.id).first();
+      let refund = 0;
+      if (owned) {
+        refund = 50;
+      } else {
+        await env.DB.prepare("INSERT INTO inventory (email, item) VALUES (?, ?)").bind(sess.email, item.id).run();
       }
+      await env.DB.prepare(
+        "UPDATE users SET points=points-?+?, gacha_count=gacha_count+1 WHERE email=?"
+      ).bind(COST, refund, sess.email).run();
+      const newAch = [];
+      const g = await grantAch(env, sess.email, "gacha10", (u.gacha_count || 0) + 1 >= 10);
+      if (g) newAch.push(g);
+      const c = await grantAch(env, sess.email, "ssr", rarity === "SSR");
+      if (c) newAch.push(c);
+      const sh = await grantAch(env, sess.email, "shop5", await countInv(env, sess.email) >= 5);
+      if (sh) newAch.push(sh);
+      return json({
+        ok: true, item, dup: !!owned, refund,
+        points: (u.points || 0) - COST + refund + newAch.reduce((s, a) => s + a.bonus, 0),
+        ach_new: newAch,
+      });
+    }
+
+    if (url.pathname === "/api/equip" && request.method === "POST") {
+      const b = await body(request);
+      if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
       if (!sess) return json({ error: "Googleログインしてください" }, 401);
       if (!["weapon", "armor", "acc"].includes(b.slot)) return json({ error: "bad slot" }, 400);
       await ensureGameTables(env);
+      const allItems = { ...ITEMS };
+      for (const i of GACHA_ITEMS) allItems[i.id] = i;
       if (b.item) {
-        if (!ITEMS[b.item] || ITEMS[b.item].slot !== b.slot) return json({ error: "bad item" }, 400);
+        if (!allItems[b.item] || allItems[b.item].slot !== b.slot) return json({ error: "bad item" }, 400);
         const owned = await env.DB.prepare(
           "SELECT 1 AS x FROM inventory WHERE email=? AND item=?"
         ).bind(sess.email, b.item).first();
@@ -129,32 +173,53 @@ export default {
       const sess = await verifySession(env, url.searchParams.get("token") || "");
       if (!sess) return json({ error: "Googleログインしてください" }, 401);
       await ensureGameTables(env);
-      const users = await env.DB.prepare("SELECT email, name, points FROM users").all();
+      const users = await env.DB.prepare("SELECT email, name, points, login_streak FROM users").all();
       const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
+      const all = { ...ITEMS };
+      for (const i of GACHA_ITEMS) all[i.id] = i;
       const powerMap = {};
       for (const u of users.results) powerMap[u.email] = 100;
       for (const r of eqs.results) {
-        if (ITEMS[r.item] && powerMap[r.email] !== undefined) powerMap[r.email] += ITEMS[r.item].power;
+        if (all[r.item] && powerMap[r.email] !== undefined) powerMap[r.email] += all[r.item].power;
       }
-      const list = users.results
-        .map((u) => ({
-          id: u.email.split("@")[0],
-          name: u.name,
-          power: powerMap[u.email],
-          points: u.points,
-        }))
-        .sort((a, b) => b.power - a.power || b.points - a.points)
-        .slice(0, 30);
-      return json({ ranking: list, me: sess.email.split("@")[0] });
+      const totals = await env.DB.prepare(
+        "SELECT student, COUNT(*) AS c FROM answers GROUP BY student"
+      ).all();
+      const week = await env.DB.prepare(
+        "SELECT student, COUNT(*) AS c, SUM(correct) AS s FROM answers WHERE ts >= ? GROUP BY student"
+      ).bind(Date.now() / 1000 - 7 * 86400).all();
+      const totMap = {}, nameMap = {}, weekMap = {};
+      for (const r of totals.results) {
+        const id = String(r.student).split(" ")[0];
+        totMap[id] = r.c;
+        nameMap[id] = String(r.student).split(" ").slice(1).join(" ");
+      }
+      for (const r of week.results) {
+        weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 8 + r.c * 2;
+      }
+      const entry = (u) => ({
+        id: u.email.split("@")[0],
+        name: u.name || nameMap[u.email.split("@")[0]] || "",
+        power: powerMap[u.email],
+        points: u.points,
+        streak: u.login_streak || 0,
+        total: totMap[u.email.split("@")[0]] || 0,
+        weekly: weekMap[u.email.split("@")[0]] || 0,
+        rank: rankOf(totMap[u.email.split("@")[0]] || 0),
+      });
+      const list = users.results.map(entry);
+      return json({
+        power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
+        weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
+        rank: [...list].sort((a, b) => b.total - a.total).slice(0, 30),
+        streak: [...list].sort((a, b) => b.streak - a.streak).slice(0, 30),
+        me: sess.email.split("@")[0],
+      });
     }
 
     if (url.pathname === "/api/answer" && request.method === "POST") {
-      let b;
-      try {
-        b = await request.json();
-      } catch {
-        return json({ error: "bad request" }, 400);
-      }
+      const b = await body(request);
+      if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
       if (!sess) return json({ error: "Googleログインしてください" }, 401);
       const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
@@ -162,23 +227,19 @@ export default {
       try {
         await env.DB.prepare(
           "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
-        )
-          .bind(
-            student,
-            String(b.term || "").slice(0, 200),
-            String(b.direction || "").slice(0, 10),
-            b.correct ? 1 : 0,
-            Date.now() / 1000
-          )
-          .run();
+        ).bind(student, String(b.term || "").slice(0, 200), String(b.direction || "").slice(0, 10),
+          b.correct ? 1 : 0, Date.now() / 1000).run();
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
-      const earned = b.correct ? 10 : 2;
       const u = await getUser(env, sess.email, sess.name);
       const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
-      await env.DB.prepare("UPDATE users SET points=points+?, cur_streak=? WHERE email=?")
-        .bind(earned, streak, sess.email).run();
+      const power = await getPower(env, sess.email);
+      const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
+      const earned = (b.correct ? 10 : 2) + combo;
+      await env.DB.prepare(
+        "UPDATE users SET points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?"
+      ).bind(earned, earned, streak, streak, sess.email).run();
       const doneM = [];
       const m1 = await bumpMission(env, sess.email, "ans10", 1, true);
       if (m1) doneM.push(m1);
@@ -188,17 +249,40 @@ export default {
         const m3 = await bumpMission(env, sess.email, "str8", streak, false);
         if (m3) doneM.push(m3);
       }
-      const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0);
-      return json({ ok: true, earned, points, missions_done: doneM });
+      let bossRes = null;
+      if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
+      const total = await getTotal(env, sess.email);
+      const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
+      const newAch = [];
+      const tryA = async (k, c) => { const a = await grantAch(env, sess.email, k, c); if (a) newAch.push(a); };
+      await tryA("first", total >= 1);
+      await tryA("ans50", total >= 50);
+      await tryA("ans100", total >= 100);
+      await tryA("ans300", total >= 300);
+      await tryA("ans500", total >= 500);
+      await tryA("streak10", streak >= 10);
+      await tryA("streak20", streak >= 20);
+      await tryA("streak30", streak >= 30);
+      await tryA("early", hour < 7);
+      await tryA("night", hour >= 23);
+      await tryA("rich", (u.lifetime || 0) + earned >= 1000);
+      if (bossRes && bossRes.killed) await tryA("boss", true);
+      const regionHits = await checkRegions(env, sess.email);
+      for (const r of regionHits) newAch.push(r);
+      const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0) +
+        newAch.reduce((s, x) => s + x.bonus, 0) + (bossRes && bossRes.killed ? 200 : 0);
+      return json({
+        ok: true, earned, combo, points,
+        missions_done: doneM, ach_new: newAch,
+        total, rank: rankOf(total),
+        rank_up: rankOf(total) !== rankOf(total - 1) ? rankOf(total) : null,
+        boss: bossRes,
+      });
     }
 
     if (url.pathname === "/api/password" && request.method === "POST") {
-      let b;
-      try {
-        b = await request.json();
-      } catch {
-        return json({ error: "bad request" }, 400);
-      }
+      const b = await body(request);
+      if (!b) return json({ error: "bad request" }, 400);
       if (!(await pwMatches(env, b.pw || ""))) return json({ error: "forbidden" }, 403);
       if (!env.DB) return json({ error: "DB binding がありません" }, 500);
       const np = String(b.new_pw || "").trim();
@@ -229,16 +313,24 @@ export default {
         return json({ error: String(e.message || e) }, 500);
       }
       const rate = (r) => (r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0);
-      let ptMap = {}, pwMap = {};
+      let ptMap = {}, pwMap = {}, streakMap = {};
       try {
-        const us = await env.DB.prepare("SELECT email, points FROM users").all();
+        const us = await env.DB.prepare("SELECT email, points, login_streak FROM users").all();
         const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
-        for (const u of us.results) { ptMap[u.email.split("@")[0]] = u.points; pwMap[u.email.split("@")[0]] = 100; }
+        const all = { ...ITEMS };
+        for (const i of GACHA_ITEMS) all[i.id] = i;
+        for (const u of us.results) {
+          ptMap[u.email.split("@")[0]] = u.points;
+          pwMap[u.email.split("@")[0]] = 100;
+          streakMap[u.email.split("@")[0]] = u.login_streak || 0;
+        }
         for (const r of eqs.results) {
           const k = r.email.split("@")[0];
-          if (ITEMS[r.item] && pwMap[k] !== undefined) pwMap[k] += ITEMS[r.item].power;
+          if (all[r.item] && pwMap[k] !== undefined) pwMap[k] += all[r.item].power;
         }
       } catch {}
+      let boss = null;
+      try { boss = await getBoss(env, ""); } catch {}
       return json({
         students: students.results.map((r) => ({
           student: r.student,
@@ -247,6 +339,8 @@ export default {
           rate: rate(r),
           points: ptMap[String(r.student).split(" ")[0]] || 0,
           power: pwMap[String(r.student).split(" ")[0]] || 100,
+          rank: rankOf(r.answered),
+          streak: streakMap[String(r.student).split(" ")[0]] || 0,
           last_ts: r.last_ts,
         })),
         terms: terms.results.map((r) => ({
@@ -255,16 +349,320 @@ export default {
           correct: r.correct,
           rate: rate(r),
         })),
+        boss,
       });
     }
 
-    // 静的ファイルへのパスマッピング（/teacher → teacher.html 等）
     const map = { "/": "/index.html", "/teacher": "/teacher.html", "/terms": "/terms.json" };
-    const mapped = map[url.pathname] || url.pathname;
-    const assetUrl = new URL(mapped, url.origin);
-    return env.ASSETS.fetch(new Request(assetUrl, request));
+    const assetPath = map[url.pathname] || url.pathname;
+    return env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
   },
 };
+
+async function body(request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
+
+const ITEMS = {
+  w1: { name: "エンピツソード", slot: "weapon", power: 10, price: 50 },
+  w2: { name: "計算機ブレード", slot: "weapon", power: 30, price: 150 },
+  w3: { name: "サーバーブレード", slot: "weapon", power: 80, price: 400 },
+  a1: { name: "学生服", slot: "armor", power: 10, price: 50 },
+  a2: { name: "ビジネススーツ", slot: "armor", power: 30, price: 150 },
+  a3: { name: "デバッグアーマー", slot: "armor", power: 80, price: 400 },
+  x1: { name: "USBメモリ", slot: "acc", power: 15, price: 80 },
+  x2: { name: "電卓のお守り", slot: "acc", power: 40, price: 200 },
+  x3: { name: "光ファイバー", slot: "acc", power: 100, price: 500 },
+};
+
+const GACHA_ITEMS = [
+  { id: "g1", name: "ペーパーナイフ", slot: "weapon", power: 5, rarity: "N" },
+  { id: "g2", name: "消しゴムダガー", slot: "weapon", power: 8, rarity: "N" },
+  { id: "g3", name: "鉄のキーボード", slot: "weapon", power: 18, rarity: "R" },
+  { id: "g4", name: "光るマウス", slot: "weapon", power: 25, rarity: "R" },
+  { id: "g5", name: "ファイアウォールブレード", slot: "weapon", power: 60, rarity: "SR" },
+  { id: "g6", name: "伝説のサーバー", slot: "weapon", power: 150, rarity: "SSR" },
+  { id: "g7", name: "パーカー", slot: "armor", power: 5, rarity: "N" },
+  { id: "g8", name: "白衣", slot: "armor", power: 8, rarity: "N" },
+  { id: "g9", name: "セキュリティベスト", slot: "armor", power: 20, rarity: "R" },
+  { id: "g10", name: "クラウドアーマー", slot: "armor", power: 60, rarity: "SR" },
+  { id: "g11", name: "量子スーツ", slot: "armor", power: 150, rarity: "SSR" },
+  { id: "g12", name: "鉛筆キャップ", slot: "acc", power: 5, rarity: "N" },
+  { id: "g13", name: "クリップ", slot: "acc", power: 12, rarity: "R" },
+  { id: "g14", name: "SSD", slot: "acc", power: 35, rarity: "SR" },
+  { id: "g15", name: "GPUお守り", slot: "acc", power: 55, rarity: "SR" },
+  { id: "g16", name: "量子チップ", slot: "acc", power: 120, rarity: "SSR" },
+];
+
+const MISSIONS = {
+  ans10: { desc: "10問回答する", goal: 10, bonus: 60 },
+  cor15: { desc: "15問正解する", goal: 15, bonus: 100 },
+  str8: { desc: "8問連続正解する", goal: 8, bonus: 80 },
+};
+
+const ACH = {
+  first: { name: "はじめの一歩", desc: "初めて回答した", bonus: 20 },
+  ans50: { name: "五十問の壁", desc: "累計50問回答", bonus: 30 },
+  ans100: { name: "百問の先輩", desc: "累計100問回答", bonus: 50 },
+  ans300: { name: "三百問の猛者", desc: "累計300問回答", bonus: 100 },
+  ans500: { name: "五百問の仙人", desc: "累計500問回答", bonus: 150 },
+  streak10: { name: "十連撃", desc: "10問連続正解", bonus: 50 },
+  streak20: { name: "二十連撃", desc: "20問連続正解", bonus: 100 },
+  streak30: { name: "無双", desc: "30問連続正解", bonus: 200 },
+  early: { name: "朝活", desc: "朝7時前に回答", bonus: 30 },
+  night: { name: "夜型人間", desc: "23時以降に回答", bonus: 30 },
+  rich: { name: "ポイント長者", desc: "累計1000pt獲得", bonus: 80 },
+  gacha10: { name: "ガチャ中毒", desc: "ガチャを10回まわす", bonus: 50 },
+  ssr: { name: "神引き", desc: "SSRを引き当てる", bonus: 100 },
+  boss: { name: "討伐隊", desc: "ボス討伐に貢献", bonus: 80 },
+  region1: { name: "制覇のはじまり", desc: "分野を1つ制覇", bonus: 100 },
+  login3: { name: "三日坊主脱却", desc: "3日連続ログイン", bonus: 30 },
+  login7: { name: "習慣の天才", desc: "7日連続ログイン", bonus: 70 },
+  shop5: { name: "コレクター", desc: "アイテムを5種所持", bonus: 50 },
+};
+
+const RANKS = [
+  { min: 800, label: "SS", title: "情報の神" },
+  { min: 400, label: "S", title: "電脳賢者" },
+  { min: 200, label: "A", title: "検定の覇者" },
+  { min: 100, label: "B", title: "用語マスター" },
+  { min: 50, label: "C", title: "問題ハンター" },
+  { min: 20, label: "D", title: "勉強家見習い" },
+  { min: 0, label: "E", title: "ただの生徒" },
+];
+
+const BOSS_NAMES = [
+  "エラーデーモン", "青画面の魔王ブルースクリーン", "漢字変換バグワーム",
+  "メモリリークの巨獣", "404番目の亡霊", "暗黒SQLインジェクタ",
+  "フリーズの鬼神", "文字化けモンスター",
+];
+const BOSS_HP = 2000;
+
+function rankOf(total) {
+  for (const r of RANKS) if (total >= r.min) return r.label;
+  return "E";
+}
+
+function nextRankAt(total) {
+  const next = [...RANKS].reverse().find((r) => r.min > total);
+  return next ? next.min : null;
+}
+
+function todayJST() {
+  return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+function weekKey() {
+  const d = new Date(Date.now() + 9 * 3600e3);
+  const jan1 = Date.UTC(d.getUTCFullYear(), 0, 1);
+  return d.getUTCFullYear() + "-W" + Math.ceil(((d - jan1) / 864e5 + 1) / 7);
+}
+
+function hashCode(s) {
+  let h = 0;
+  for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return h;
+}
+
+async function getTotal(env, email) {
+  const r = await env.DB.prepare(
+    "SELECT COUNT(*) AS c FROM answers WHERE student LIKE ?"
+  ).bind(email.split("@")[0] + " %").first();
+  return (r && r.c) || 0;
+}
+
+async function ensureGameTables(env) {
+  const stmts = [
+    "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0, last_login TEXT DEFAULT '', cur_streak INTEGER DEFAULT 0)",
+    "CREATE TABLE IF NOT EXISTS inventory (email TEXT, item TEXT, PRIMARY KEY (email, item))",
+    "CREATE TABLE IF NOT EXISTS equipped (email TEXT, slot TEXT, item TEXT, PRIMARY KEY (email, slot))",
+    "CREATE TABLE IF NOT EXISTS missions (email TEXT, day TEXT, key TEXT, progress INTEGER DEFAULT 0, claimed INTEGER DEFAULT 0, PRIMARY KEY (email, day, key))",
+    "CREATE TABLE IF NOT EXISTS achievements (email TEXT, key TEXT, ts REAL, PRIMARY KEY (email, key))",
+    "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
+    "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
+  ];
+  for (const s of stmts) await env.DB.prepare(s).run();
+  const alters = [
+    "ALTER TABLE users ADD COLUMN login_streak INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN best_streak INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN lifetime INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN gacha_count INTEGER DEFAULT 0",
+  ];
+  for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
+}
+
+async function getUser(env, email, name) {
+  await ensureGameTables(env);
+  let u = await env.DB.prepare("SELECT * FROM users WHERE email=?").bind(email).first();
+  if (!u) {
+    await env.DB.prepare("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)").bind(email, name).run();
+    u = { email, name, points: 0, last_login: "", cur_streak: 0, login_streak: 0, best_streak: 0, lifetime: 0, gacha_count: 0 };
+  } else if (name && name !== u.name) {
+    await env.DB.prepare("UPDATE users SET name=? WHERE email=?").bind(name, email).run();
+    u.name = name;
+  }
+  return u;
+}
+
+async function countInv(env, email) {
+  const r = await env.DB.prepare("SELECT COUNT(*) AS c FROM inventory WHERE email=?").bind(email).first();
+  return (r && r.c) || 0;
+}
+
+async function getPower(env, email) {
+  const all = { ...ITEMS };
+  for (const i of GACHA_ITEMS) all[i.id] = i;
+  const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
+  let p = 100;
+  for (const r of rows.results) if (all[r.item]) p += all[r.item].power;
+  return p;
+}
+
+async function bumpMission(env, email, key, val, additive) {
+  const day = todayJST();
+  const m = MISSIONS[key];
+  let row = await env.DB.prepare(
+    "SELECT progress, claimed FROM missions WHERE email=? AND day=? AND key=?"
+  ).bind(email, day, key).first();
+  if (!row) {
+    await env.DB.prepare(
+      "INSERT INTO missions (email, day, key, progress, claimed) VALUES (?, ?, ?, ?, 0)"
+    ).bind(email, day, key, Math.min(val, m.goal)).run();
+    row = { progress: Math.min(val, m.goal), claimed: 0 };
+  } else if (!row.claimed && row.progress < m.goal) {
+    const np = Math.min(m.goal, additive ? row.progress + val : val);
+    await env.DB.prepare(
+      "UPDATE missions SET progress=? WHERE email=? AND day=? AND key=?"
+    ).bind(np, email, day, key).run();
+    row.progress = np;
+  }
+  if (!row.claimed && row.progress >= m.goal) {
+    await env.DB.prepare(
+      "UPDATE missions SET claimed=1 WHERE email=? AND day=? AND key=?"
+    ).bind(email, day, key).run();
+    await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(m.bonus, email).run();
+    return { desc: m.desc, bonus: m.bonus };
+  }
+  return null;
+}
+
+async function grantAch(env, email, key, cond) {
+  if (!cond) return null;
+  const got = await env.DB.prepare(
+    "SELECT 1 AS x FROM achievements WHERE email=? AND key=?"
+  ).bind(email, key).first();
+  if (got) return null;
+  const a = ACH[key];
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO achievements (email, key, ts) VALUES (?, ?, ?)"
+  ).bind(email, key, Date.now()).run();
+  await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(a.bonus, email).run();
+  return { key, name: a.name, desc: a.desc, bonus: a.bonus };
+}
+
+let TERMS_MAP = null;
+async function getTermsMap(env) {
+  if (TERMS_MAP) return TERMS_MAP;
+  try {
+    const r = await env.ASSETS.fetch(new Request("https://assets.local/terms.json"));
+    const arr = await r.json();
+    TERMS_MAP = {};
+    for (const t of arr) TERMS_MAP[t.term] = t.category;
+  } catch {}
+  return TERMS_MAP || {};
+}
+
+async function getRegions(env, email) {
+  const tm = await getTermsMap(env);
+  const rows = await env.DB.prepare(
+    "SELECT term, COUNT(*) AS c, SUM(correct) AS s FROM answers WHERE student LIKE ? GROUP BY term"
+  ).bind(email.split("@")[0] + " %").all();
+  const cats = {};
+  for (const r of rows.results) {
+    const cat = tm[r.term] || "その他";
+    if (!cats[cat]) cats[cat] = { c: 0, s: 0 };
+    cats[cat].c += r.c;
+    cats[cat].s += r.s || 0;
+  }
+  return Object.entries(cats).map(([cat, v]) => ({
+    cat,
+    answered: v.c,
+    rate: v.c ? Math.round((v.s / v.c) * 100) : 0,
+    cleared: v.c >= 8 && v.s / v.c >= 0.6,
+  }));
+}
+
+async function checkRegions(env, email) {
+  const regions = await getRegions(env, email);
+  const hits = [];
+  for (const r of regions.filter((x) => x.cleared)) {
+    const key = "region:" + r.cat;
+    const got = await env.DB.prepare(
+      "SELECT 1 AS x FROM achievements WHERE email=? AND key=?"
+    ).bind(email, key).first();
+    if (!got) {
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO achievements (email, key, ts) VALUES (?, ?, ?)"
+      ).bind(email, key, Date.now()).run();
+      await env.DB.prepare("UPDATE users SET points=points+100 WHERE email=?").bind(email).run();
+      hits.push({ key, name: "分野制覇", desc: `「${r.cat}」を制覇`, bonus: 100 });
+    }
+  }
+  const g = await grantAch(env, email, "region1", regions.filter((x) => x.cleared).length >= 1);
+  if (g) hits.push(g);
+  return hits;
+}
+
+async function getBoss(env, email) {
+  const wk = weekKey();
+  let b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
+  if (!b || b.week !== wk) {
+    const name = BOSS_NAMES[Math.abs(hashCode(wk)) % BOSS_NAMES.length];
+    await env.DB.prepare(
+      "INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)"
+    ).bind(wk, name, BOSS_HP, BOSS_HP).run();
+    b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
+  }
+  let my = 0, attackers = 0;
+  if (email) {
+    const d = await env.DB.prepare(
+      "SELECT dmg FROM boss_damage WHERE email=? AND boss_id=?"
+    ).bind(email, b.id).first();
+    my = d ? d.dmg : 0;
+  }
+  const c = await env.DB.prepare(
+    "SELECT COUNT(DISTINCT email) AS c FROM boss_damage WHERE boss_id=?"
+  ).bind(b.id).first();
+  attackers = c ? c.c : 0;
+  return { name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers };
+}
+
+async function damageBoss(env, email, dmg) {
+  const wk = weekKey();
+  const b = await env.DB.prepare("SELECT * FROM boss WHERE week=?").bind(wk).first();
+  if (!b || b.defeated) return null;
+  const newHp = Math.max(0, b.hp - dmg);
+  await env.DB.prepare("UPDATE boss SET hp=? WHERE id=?").bind(newHp, b.id).run();
+  await env.DB.prepare(
+    "INSERT INTO boss_damage (email, boss_id, dmg) VALUES (?, ?, ?) " +
+    "ON CONFLICT(email, boss_id) DO UPDATE SET dmg=dmg+excluded.dmg"
+  ).bind(email, b.id, dmg).run();
+  if (newHp === 0) {
+    await env.DB.prepare("UPDATE boss SET defeated=1 WHERE id=?").bind(b.id).run();
+    const parts = await env.DB.prepare(
+      "SELECT email FROM boss_damage WHERE boss_id=?"
+    ).bind(b.id).all();
+    for (const p of parts.results) {
+      await env.DB.prepare("UPDATE users SET points=points+200 WHERE email=?").bind(p.email).run();
+    }
+    return { killed: true, name: b.name, dmg };
+  }
+  return { killed: false, dmg, hp: newHp };
+}
 
 function b64e(s) {
   return btoa(unescape(encodeURIComponent(s)));
@@ -315,86 +713,6 @@ async function verifySession(env, token) {
   const [email, name, exp] = payload.split("|");
   if (Number(exp) < Date.now()) return null;
   return { email, name };
-}
-
-const ITEMS = {
-  w1: { name: "エンピツソード", slot: "weapon", power: 10, price: 50 },
-  w2: { name: "計算機ブレード", slot: "weapon", power: 30, price: 150 },
-  w3: { name: "サーバーブレード", slot: "weapon", power: 80, price: 400 },
-  a1: { name: "学生服", slot: "armor", power: 10, price: 50 },
-  a2: { name: "ビジネススーツ", slot: "armor", power: 30, price: 150 },
-  a3: { name: "デバッグアーマー", slot: "armor", power: 80, price: 400 },
-  x1: { name: "USBメモリ", slot: "acc", power: 15, price: 80 },
-  x2: { name: "電卓のお守り", slot: "acc", power: 40, price: 200 },
-  x3: { name: "光ファイバー", slot: "acc", power: 100, price: 500 },
-};
-
-const MISSIONS = {
-  ans10: { desc: "10問回答する", goal: 10, bonus: 60 },
-  cor15: { desc: "15問正解する", goal: 15, bonus: 100 },
-  str8: { desc: "8問連続正解する", goal: 8, bonus: 80 },
-};
-
-function todayJST() {
-  return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-}
-
-async function ensureGameTables(env) {
-  const stmts = [
-    "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0, last_login TEXT DEFAULT '', cur_streak INTEGER DEFAULT 0)",
-    "CREATE TABLE IF NOT EXISTS inventory (email TEXT, item TEXT, PRIMARY KEY (email, item))",
-    "CREATE TABLE IF NOT EXISTS equipped (email TEXT, slot TEXT, item TEXT, PRIMARY KEY (email, slot))",
-    "CREATE TABLE IF NOT EXISTS missions (email TEXT, day TEXT, key TEXT, progress INTEGER DEFAULT 0, claimed INTEGER DEFAULT 0, PRIMARY KEY (email, day, key))",
-  ];
-  for (const s of stmts) await env.DB.prepare(s).run();
-}
-
-async function getUser(env, email, name) {
-  await ensureGameTables(env);
-  let u = await env.DB.prepare("SELECT * FROM users WHERE email=?").bind(email).first();
-  if (!u) {
-    await env.DB.prepare("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)").bind(email, name).run();
-    u = { email, name, points: 0, last_login: "", cur_streak: 0 };
-  } else if (name && name !== u.name) {
-    await env.DB.prepare("UPDATE users SET name=? WHERE email=?").bind(name, email).run();
-    u.name = name;
-  }
-  return u;
-}
-
-async function getPower(env, email) {
-  const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
-  let p = 100;
-  for (const r of rows.results) if (ITEMS[r.item]) p += ITEMS[r.item].power;
-  return p;
-}
-
-async function bumpMission(env, email, key, val, additive) {
-  const day = todayJST();
-  const m = MISSIONS[key];
-  let row = await env.DB.prepare(
-    "SELECT progress, claimed FROM missions WHERE email=? AND day=? AND key=?"
-  ).bind(email, day, key).first();
-  if (!row) {
-    await env.DB.prepare(
-      "INSERT INTO missions (email, day, key, progress, claimed) VALUES (?, ?, ?, ?, 0)"
-    ).bind(email, day, key, Math.min(val, m.goal)).run();
-    row = { progress: Math.min(val, m.goal), claimed: 0 };
-  } else if (!row.claimed && row.progress < m.goal) {
-    const np = Math.min(m.goal, additive ? row.progress + val : val);
-    await env.DB.prepare(
-      "UPDATE missions SET progress=? WHERE email=? AND day=? AND key=?"
-    ).bind(np, email, day, key).run();
-    row.progress = np;
-  }
-  if (!row.claimed && row.progress >= m.goal) {
-    await env.DB.prepare(
-      "UPDATE missions SET claimed=1 WHERE email=? AND day=? AND key=?"
-    ).bind(email, day, key).run();
-    await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(m.bonus, email).run();
-    return { desc: m.desc, bonus: m.bonus };
-  }
-  return null;
 }
 
 async function hashPw(s) {

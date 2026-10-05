@@ -1,4 +1,4 @@
-import { ITEMS, ensureGameTables, getPower, verifySession, json } from "../_game.js";
+import { allItems, ensureGameTables, getPower, verifySession, json } from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -11,8 +11,9 @@ export async function onRequestPost({ request, env }) {
   if (!sess) return json({ error: "Googleログインしてください" }, 401);
   if (!["weapon", "armor", "acc"].includes(b.slot)) return json({ error: "bad slot" }, 400);
   await ensureGameTables(env);
+  const all = allItems();
   if (b.item) {
-    if (!ITEMS[b.item] || ITEMS[b.item].slot !== b.slot) return json({ error: "bad item" }, 400);
+    if (!all[b.item] || all[b.item].slot !== b.slot) return json({ error: "bad item" }, 400);
     const owned = await env.DB.prepare(
       "SELECT 1 AS x FROM inventory WHERE email=? AND item=?"
     ).bind(sess.email, b.item).first();

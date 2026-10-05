@@ -24,3 +24,26 @@ CREATE TABLE IF NOT EXISTS missions (
   claimed INTEGER DEFAULT 0,
   PRIMARY KEY (email, day, key)
 );
+
+CREATE TABLE IF NOT EXISTS achievements (
+  email TEXT,
+  key TEXT,
+  ts REAL,
+  PRIMARY KEY (email, key)
+);
+
+CREATE TABLE IF NOT EXISTS boss (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  week TEXT,
+  name TEXT,
+  hp INTEGER,
+  max_hp INTEGER,
+  defeated INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS boss_damage (
+  email TEXT,
+  boss_id INTEGER,
+  dmg INTEGER DEFAULT 0,
+  PRIMARY KEY (email, boss_id)
+);

@@ -1,4 +1,4 @@
-import { ITEMS, getUser, verifySession, json } from "../_game.js";
+import { ITEMS, getUser, countInv, grantAch, verifySession, json } from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -21,5 +21,6 @@ export async function onRequestPost({ request, env }) {
   }
   await env.DB.prepare("UPDATE users SET points=points-? WHERE email=?").bind(item.price, sess.email).run();
   await env.DB.prepare("INSERT INTO inventory (email, item) VALUES (?, ?)").bind(sess.email, b.item).run();
+  await grantAch(env, sess.email, "shop5", await countInv(env, sess.email) >= 5);
   return json({ ok: true, points: (u.points || 0) - item.price });
 }

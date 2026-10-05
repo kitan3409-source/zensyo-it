@@ -96,10 +96,15 @@
   </div>
 
   <div id="dashArea">
+    <div class="card" id="bossCard" style="display:none">
+      <h2>週間ボス</h2>
+      <div id="bossTxt" class="sub"></div>
+      <div class="mini" style="height:14px;margin-top:8px"><div id="bossBar" style="background:linear-gradient(90deg,#ef4444,#f97316)"></div></div>
+    </div>
     <div class="card">
       <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
       <table>
-        <thead><tr><th>ID / 名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>最終回答</th></tr></thead>
+        <thead><tr><th>ID / 名前</th><th>ランク</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>連続ログイン</th><th>最終回答</th></tr></thead>
         <tbody id="studentRows"></tbody>
       </table>
       <div class="empty" id="noStudents">まだ回答がありません</div>
@@ -159,14 +164,24 @@ async function load() {
   $('studentRows').innerHTML = d.students.map(s => `
     <tr>
       <td>${esc(s.student)}</td>
+      <td><b>${s.rank || 'E'}</b></td>
       <td>${s.answered}</td>
       <td>${s.correct}</td>
       <td class="rate ${rateClass(s.rate)}">${s.rate}%</td>
       <td class="bar-cell"><div class="mini"><div style="width:${s.rate}%"></div></div></td>
       <td>${s.points || 0}</td>
       <td>${s.power || 100}</td>
+      <td>${s.streak || 0}日</td>
       <td>${fmtTime(s.last_ts)}</td>
     </tr>`).join('');
+
+  if (d.boss) {
+    $('bossCard').style.display = 'block';
+    $('bossTxt').textContent = d.boss.defeated
+      ? `${d.boss.name} — 討伐済み（参加者 ${d.boss.attackers}人）`
+      : `${d.boss.name} — 残りHP ${d.boss.hp}/${d.boss.max_hp}（参加者 ${d.boss.attackers}人）`;
+    $('bossBar').style.width = Math.round(d.boss.hp / d.boss.max_hp * 100) + '%';
+  }
 
   $('noTerms').style.display = d.terms.length ? 'none' : 'block';
   $('termRows').innerHTML = d.terms.map(t => `

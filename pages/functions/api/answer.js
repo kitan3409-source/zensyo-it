@@ -1,4 +1,7 @@
-import { getUser, bumpMission, verifySession, json } from "../_game.js";
+import {
+  getUser, getPower, getTotal, bumpMission, grantAch, damageBoss,
+  checkRegions, rankOf, verifySession, json,
+} from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -12,20 +15,21 @@ export async function onRequestPost({ request, env }) {
   const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
   await env.DB.prepare(
     "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
-  )
-    .bind(
-      student,
-      String(b.term || "").slice(0, 200),
-      String(b.direction || "").slice(0, 10),
-      b.correct ? 1 : 0,
-      Date.now() / 1000
-    )
-    .run();
-  const earned = b.correct ? 10 : 2;
+  ).bind(
+    student,
+    String(b.term || "").slice(0, 200),
+    String(b.direction || "").slice(0, 10),
+    b.correct ? 1 : 0,
+    Date.now() / 1000
+  ).run();
   const u = await getUser(env, sess.email, sess.name);
   const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
-  await env.DB.prepare("UPDATE users SET points=points+?, cur_streak=? WHERE email=?")
-    .bind(earned, streak, sess.email).run();
+  const power = await getPower(env, sess.email);
+  const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
+  const earned = (b.correct ? 10 : 2) + combo;
+  await env.DB.prepare(
+    "UPDATE users SET points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?"
+  ).bind(earned, earned, streak, streak, sess.email).run();
   const doneM = [];
   const m1 = await bumpMission(env, sess.email, "ans10", 1, true);
   if (m1) doneM.push(m1);
@@ -35,6 +39,33 @@ export async function onRequestPost({ request, env }) {
     const m3 = await bumpMission(env, sess.email, "str8", streak, false);
     if (m3) doneM.push(m3);
   }
-  const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0);
-  return json({ ok: true, earned, points, missions_done: doneM });
+  let bossRes = null;
+  if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
+  const total = await getTotal(env, sess.email);
+  const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
+  const newAch = [];
+  const tryA = async (k, c) => { const a = await grantAch(env, sess.email, k, c); if (a) newAch.push(a); };
+  await tryA("first", total >= 1);
+  await tryA("ans50", total >= 50);
+  await tryA("ans100", total >= 100);
+  await tryA("ans300", total >= 300);
+  await tryA("ans500", total >= 500);
+  await tryA("streak10", streak >= 10);
+  await tryA("streak20", streak >= 20);
+  await tryA("streak30", streak >= 30);
+  await tryA("early", hour < 7);
+  await tryA("night", hour >= 23);
+  await tryA("rich", (u.lifetime || 0) + earned >= 1000);
+  if (bossRes && bossRes.killed) await tryA("boss", true);
+  const regionHits = await checkRegions(env, sess.email, new URL(request.url).origin);
+  for (const r of regionHits) newAch.push(r);
+  const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0) +
+    newAch.reduce((s, x) => s + x.bonus, 0) + (bossRes && bossRes.killed ? 200 : 0);
+  return json({
+    ok: true, earned, combo, points,
+    missions_done: doneM, ach_new: newAch,
+    total, rank: rankOf(total),
+    rank_up: rankOf(total) !== rankOf(total - 1) ? rankOf(total) : null,
+    boss: bossRes,
+  });
 }

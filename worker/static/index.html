@@ -108,6 +108,30 @@
   .rankRow .pw { color: var(--primary); font-weight: 800; }
   #gameNotice { color: var(--good); font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; }
   .slotName { color: var(--on-surface-var); font-size: 0.75rem; font-weight: 700; margin: 12px 0 6px; }
+  .rankBadge { display: inline-flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .rankBadge .letter { font-size: 2.4rem; font-weight: 800; color: var(--primary); line-height: 1; }
+  .rankBadge .title { color: var(--on-surface-var); font-size: 0.85rem; font-weight: 700; }
+  .rankNext { font-size: 0.8rem; color: var(--on-surface-var); margin-top: 8px; }
+  .bossHp { height: 16px; background: var(--surface-c-highest); border-radius: 999px; overflow: hidden; margin: 8px 0; }
+  .bossHp > div { height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); border-radius: 999px; transition: width 0.5s var(--spring); }
+  .bossInfo { font-size: 0.8rem; color: var(--on-surface-var); display: flex; justify-content: space-between; }
+  .gachaBtn { width: 100%; padding: 14px; font-size: 1rem; }
+  #gachaResult { margin-top: 10px; font-size: 0.9rem; min-height: 1.2em; }
+  #gachaResult .rar { font-weight: 800; }
+  .rar-SSR { color: #ffd54a; } .rar-SR { color: var(--primary); } .rar-R { color: #7dd8f0; } .rar-N { color: var(--on-surface-var); }
+  .achGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ach { padding: 8px 12px; border-radius: 14px; background: var(--surface-c-high); font-size: 0.78rem; opacity: 0.45; }
+  .ach.on { opacity: 1; background: var(--primary-container); }
+  .ach .an { font-weight: 800; }
+  .ach .ad { color: var(--on-surface-var); font-size: 0.7rem; }
+  .ach.on .ad { color: var(--on-primary-container); }
+  .regionRow { display: flex; justify-content: space-between; align-items: center; padding: 7px 4px; font-size: 0.82rem; border-bottom: 1px solid var(--outline-var); }
+  .regionRow:last-child { border-bottom: none; }
+  .regionRow .st { font-size: 0.75rem; color: var(--on-surface-var); }
+  .regionRow .st.clr { color: var(--good); font-weight: 800; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tabs button { background: var(--surface-c-high); color: var(--on-surface-var); border: none; border-radius: 999px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; font-family: inherit; cursor: pointer; }
+  .tabs button.on { background: var(--primary); color: var(--on-primary); }
   input[type=text]:focus, select:focus { outline: none; border-color: var(--primary); }
   .btn {
     background: var(--primary);
@@ -254,14 +278,39 @@
   <div class="hint" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
 
   <div class="card gameArea" id="charCard">
-    <h2>キャラ <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span></h2>
+    <h2>キャラ <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span> <span class="sub">連続ログイン <b id="streakVal">0</b>日</span></h2>
+    <div class="rankBadge"><span class="letter" id="rankVal">E</span><span class="title" id="rankTitle">ただの生徒</span></div>
+    <div class="mission"><div class="mbar"><div id="rankBar"></div></div><div class="rankNext" id="rankNext"></div></div>
     <div id="gameNotice"></div>
     <div class="eq" id="equipList"></div>
+  </div>
+
+  <div class="card gameArea" id="bossCard">
+    <h2>週間ボス <span class="sub" id="bossSub"></span></h2>
+    <div style="font-weight:800" id="bossName"></div>
+    <div class="bossHp"><div id="bossBar"></div></div>
+    <div class="bossInfo"><span id="bossMy"></span><span id="bossAtk"></span></div>
+  </div>
+
+  <div class="card gameArea" id="gachaCard">
+    <h2>ガチャ <span class="sub">1回 100pt — N60% R30% SR9% SSR1%</span></h2>
+    <button class="btn gachaBtn" id="gachaBtn">ガチャをまわす</button>
+    <div id="gachaResult"></div>
   </div>
 
   <div class="card gameArea" id="missionCard">
     <h2>今日のミッション</h2>
     <div id="missionList"></div>
+  </div>
+
+  <div class="card gameArea" id="regionCard">
+    <h2>分野制覇 <span class="sub">8問以上かつ正答率60%で制覇 +100pt</span></h2>
+    <div id="regionList"></div>
+  </div>
+
+  <div class="card gameArea" id="achCard">
+    <h2>実績 <span class="sub" id="achCount"></span></h2>
+    <div class="achGrid" id="achList"></div>
   </div>
 
   <div class="card gameArea" id="shopCard">
@@ -270,7 +319,13 @@
   </div>
 
   <div class="card gameArea" id="rankCard">
-    <h2>ランキング（つよさ順）</h2>
+    <h2>ランキング</h2>
+    <div class="tabs" id="rankTabs">
+      <button data-t="power" class="on">つよさ</button>
+      <button data-t="rank">ランク</button>
+      <button data-t="weekly">今週のpt</button>
+      <button data-t="streak">連続ログイン</button>
+    </div>
     <div id="rankList"></div>
   </div>
 
@@ -336,25 +391,61 @@ function showSignedIn() {
 }
 
 const SLOT_LABEL = { weapon: '武器', armor: '服', acc: 'アクセサリ' };
+const RANK_TITLE = { SS: '情報の神', S: '電脳賢者', A: '検定の覇者', B: '用語マスター', C: '問題ハンター', D: '勉強家見習い', E: 'ただの生徒' };
 let me = null;
+let rankData = null;
+let rankTab = 'power';
+
+function allItems() {
+  const m = { ...(me ? me.items : {}) };
+  for (const i of (me ? me.gacha : [])) m[i.id] = i;
+  return m;
+}
 
 async function loadGame() {
   const r = await fetch('/api/me?token=' + encodeURIComponent(token));
   if (!r.ok) return;
   me = await r.json();
+  const items = allItems();
   $('powerVal').textContent = me.power;
   $('pointVal').textContent = me.points;
+  $('streakVal').textContent = me.streak;
+  $('rankVal').textContent = me.rank;
+  $('rankTitle').textContent = RANK_TITLE[me.rank] || '';
+  $('rankNext').textContent = me.next_at
+    ? `累計${me.total}問 — 次のランクまであと ${me.next_at - me.total} 問`
+    : `累計${me.total}問 — 最高ランク到達`;
+  const prev = me.next_at ? ({ 20: 0, 50: 20, 100: 50, 200: 100, 400: 200, 800: 400 }[me.next_at] || 0) : 800;
+  $('rankBar').style.width = me.next_at ? Math.min(100, (me.total - prev) / (me.next_at - prev) * 100) + '%' : '100%';
   $('gameNotice').textContent = me.login_bonus ? `ログインボーナス +${me.login_bonus}pt!` : '';
-  const eq = ['weapon', 'armor', 'acc'].map(s => {
+  $('equipList').innerHTML = ['weapon', 'armor', 'acc'].map(s => {
     const id = me.equipped[s];
-    return `<div>${SLOT_LABEL[s]}: <b>${id ? me.items[id].name + ' +' + me.items[id].power : 'なし'}</b></div>`;
+    const it = id ? items[id] : null;
+    return `<div>${SLOT_LABEL[s]}: <b>${it ? it.name + ' +' + it.power : 'なし'}</b></div>`;
   }).join('');
-  $('equipList').innerHTML = eq;
+
+  const bs = me.boss;
+  $('bossName').textContent = bs.defeated ? `${bs.name} — 討伐済み` : bs.name;
+  $('bossSub').textContent = bs.defeated ? '貢献者全員に+200pt配布済み' : '正解でダメージ（つよさが高いほど大ダメージ）';
+  $('bossBar').style.width = Math.round(bs.hp / bs.max_hp * 100) + '%';
+  $('bossMy').textContent = `あなたのダメージ: ${bs.my_dmg}`;
+  $('bossAtk').textContent = `参加者 ${bs.attackers}人 / 残りHP ${bs.hp}`;
+
   $('missionList').innerHTML = me.missions.map(m => `
     <div class="mission">
       <div>${m.desc}（${m.progress}/${m.goal}） <span class="sub">+${m.bonus}pt</span> ${m.claimed ? '<span class="mdone">達成済み</span>' : ''}</div>
       <div class="mbar"><div style="width:${Math.min(100, m.progress / m.goal * 100)}%"></div></div>
     </div>`).join('');
+
+  $('regionList').innerHTML = me.regions.length
+    ? me.regions.map(r => `<div class="regionRow"><span>${r.cat}</span><span class="st${r.cleared ? ' clr' : ''}">${r.cleared ? '制覇' : `${r.answered}問 ${r.rate}%`}</span></div>`).join('')
+    : '<div class="regionRow"><span class="st">まだ回答がありません</span></div>';
+
+  const unl = new Set(me.unlocked);
+  $('achCount').textContent = `${unl.size}/${Object.keys(me.achievements).length}`;
+  $('achList').innerHTML = Object.entries(me.achievements).map(([k, a]) =>
+    `<div class="ach${unl.has(k) ? ' on' : ''}"><div class="an">${unl.has(k) ? a.name : '？？？'}</div><div class="ad">${a.desc} +${a.bonus}pt</div></div>`).join('');
+
   const groups = [['weapon', '武器'], ['armor', '服'], ['acc', 'アクセサリ']];
   $('shopList').innerHTML = groups.map(([slot, label]) =>
     `<div class="slotName">${label}</div>` +
@@ -367,13 +458,54 @@ async function loadGame() {
         <button class="${cls}" onclick="shop('${id}')">${label2}</button></div>`;
     }).join('')
   ).join('');
-  const rr = await fetch('/api/ranking?token=' + encodeURIComponent(token));
-  if (rr.ok) {
-    const d = await rr.json();
-    $('rankList').innerHTML = d.ranking.length
-      ? d.ranking.map((r, i) => `<div class="rankRow${r.id === d.me ? ' me' : ''}"><span>${i + 1}位 ${r.name}（${r.id}）</span><span class="pw">つよさ ${r.power}</span></div>`).join('')
-      : '<div class="rankRow">まだ誰もいません</div>';
+
+  const gachaOwned = me.gacha.filter(i => me.inventory.includes(i.id));
+  if (gachaOwned.length) {
+    $('shopList').innerHTML += '<div class="slotName">ガチャ産アイテム（装備）</div>' +
+      gachaOwned.map(i => {
+        const equipped = me.equipped[i.slot] === i.id;
+        return `<div class="shopItem"><div class="meta">${i.name} <span class="rar rar-${i.rarity}">${i.rarity}</span><small>${SLOT_LABEL[i.slot]} つよさ+${i.power}</small></div>
+          <button class="buy ${equipped ? 'equipped' : 'owned'}" onclick="equipIt('${i.id}')">${equipped ? '装備中（外す）' : '装備する'}</button></div>`;
+      }).join('');
   }
+
+  const rr = await fetch('/api/ranking?token=' + encodeURIComponent(token));
+  if (rr.ok) { rankData = await rr.json(); renderRank(); }
+}
+
+const RANK_FMT = {
+  power: (r) => `つよさ ${r.power}`,
+  rank: (r) => `ランク${r.rank}（${r.total}問）`,
+  weekly: (r) => `今週 +${r.weekly}pt`,
+  streak: (r) => `${r.streak}日連続`,
+};
+
+function renderRank() {
+  if (!rankData) return;
+  const list = rankData[rankTab] || [];
+  $('rankList').innerHTML = list.length
+    ? list.map((r, i) => `<div class="rankRow${r.id === rankData.me ? ' me' : ''}"><span>${i + 1}位 ${r.name}（${r.id}）</span><span class="pw">${RANK_FMT[rankTab](r)}</span></div>`).join('')
+    : '<div class="rankRow">まだ誰もいません</div>';
+}
+
+for (const b of document.querySelectorAll('#rankTabs button')) {
+  b.onclick = () => {
+    rankTab = b.dataset.t;
+    document.querySelectorAll('#rankTabs button').forEach(x => x.classList.toggle('on', x === b));
+    renderRank();
+  };
+}
+
+async function equipIt(id) {
+  const it = allItems()[id];
+  const equipped = me.equipped[it.slot] === id;
+  const r = await fetch('/api/equip', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, slot: it.slot, item: equipped ? '' : id })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $('gameNotice').textContent = d.error || 'エラー'; return; }
+  loadGame();
 }
 
 async function shop(id) {
@@ -389,6 +521,22 @@ async function shop(id) {
   if (!r.ok) { $('gameNotice').textContent = d.error || 'エラー'; return; }
   loadGame();
 }
+
+$('gachaBtn').onclick = async () => {
+  $('gachaResult').innerHTML = 'まわしています…';
+  const r = await fetch('/api/gacha', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $('gachaResult').textContent = d.error || 'エラー'; return; }
+  const it = d.item;
+  $('gachaResult').innerHTML =
+    `<span class="rar rar-${it.rarity}">[${it.rarity}]</span> <b>${it.name}</b>（${SLOT_LABEL[it.slot]} つよさ+${it.power}）` +
+    (d.dup ? ' — ダブり！50pt返還' : '');
+  if (me) { me.points = d.points; $('pointVal').textContent = d.points; }
+  loadGame();
+};
 
 $('logoutLink').onclick = (e) => {
   e.preventDefault();
@@ -515,9 +663,13 @@ async function answer(i) {
     const ad = ar.ok ? await ar.json() : null;
     if (ad) {
       if (me) { me.points = ad.points; $('pointVal').textContent = ad.points; }
-      if (ad.missions_done && ad.missions_done.length) {
-        fb.innerHTML += ' <b>ミッション達成:</b> ' + ad.missions_done.map(m => esc(m.desc) + ' +' + m.bonus + 'pt').join('、');
-      }
+      const notes = [];
+      if (ad.combo) notes.push(`連撃ボーナス +${ad.combo}pt`);
+      if (ad.missions_done && ad.missions_done.length) notes.push('ミッション達成: ' + ad.missions_done.map(m => m.desc + ` +${m.bonus}pt`).join('、'));
+      if (ad.ach_new && ad.ach_new.length) notes.push('実績解除: ' + ad.ach_new.map(a => a.name + ` +${a.bonus}pt`).join('、'));
+      if (ad.rank_up) notes.push(`ランクアップ！ ${ad.rank_up}（${RANK_TITLE[ad.rank_up] || ''}）`);
+      if (ad.boss) notes.push(ad.boss.killed ? `ボス「${ad.boss.name}」討伐！ +200pt` : `ボスに${ad.boss.dmg}ダメージ`);
+      if (notes.length) fb.innerHTML += ' <b>' + notes.map(esc).join(' / ') + '</b>';
       loadGame();
     }
   } catch (e) { /* 記録失敗しても進める */ }
