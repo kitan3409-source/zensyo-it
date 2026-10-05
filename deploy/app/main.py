@@ -774,6 +774,26 @@ def post_pin_reset(p: PinResetIn):
     return {"ok": True}
 
 
+class ResetIn(BaseModel):
+    pw: str
+
+
+@app.post("/api/reset")
+def post_reset(p: ResetIn):
+    conn = get_db()
+    if not pw_matches(conn, p.pw):
+        conn.close()
+        raise HTTPException(403, "forbidden")
+    for t in ("answers", "users", "inventory", "equipped", "missions", "achievements", "pins", "boss", "boss_damage"):
+        try:
+            conn.execute(f"DELETE FROM {t}")
+        except sqlite3.OperationalError:
+            pass
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 class PasswordIn(BaseModel):
     pw: str
     new_pw: str

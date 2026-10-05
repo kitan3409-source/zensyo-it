@@ -120,6 +120,12 @@
       <div class="empty" id="noTerms">まだ回答がありません</div>
     </div>
     <div class="card">
+      <h2 style="color:var(--error)">データ初期化</h2>
+      <div class="sub" style="font-size:0.8rem;color:var(--on-surface-var);margin-bottom:10px">全生徒の回答・ポイント・装備・PINをすべて消去します（パスワードは残ります）。取り消しできません。</div>
+      <button class="btn" id="resetBtn" style="background:var(--error);color:#601410">全データを初期化</button>
+      <div class="okmsg" id="resetOk" style="display:none;color:var(--good);margin-top:8px;font-size:0.85rem">初期化しました</div>
+    </div>
+    <div class="card">
       <h2>パスワード変更</h2>
       <input type="password" class="sm" id="newPw" placeholder="新しいパスワード（4文字以上）">
       <div class="err" id="pwMsg"></div>
@@ -235,6 +241,17 @@ $('pwBtn').onclick = async () => {
     $('pwMsg').textContent = d.error || `変更に失敗しました（${res.status}）`;
     $('pwMsg').style.display = 'block';
   }
+};
+
+$('resetBtn').onclick = async () => {
+  if (!confirm('本当に全データを初期化しますか？\n生徒の回答・ポイント・PINがすべて消えます。')) return;
+  if (!confirm('取り消しできません。もう一度確認：実行しますか？')) return;
+  const r = await fetch('/api/reset', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pw })
+  });
+  if (r.ok) { $('resetOk').style.display = 'block'; load(); }
+  else alert('初期化に失敗しました');
 };
 
 if (pw) load();
