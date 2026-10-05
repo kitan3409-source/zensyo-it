@@ -4,66 +4,85 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>先生用ダッシュボード — 情報処理1級クイズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --card2: #273549;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #38bdf8;
-    --correct: #22c55e;
-    --mid: #f59e0b;
-    --wrong: #ef4444;
-    --border: #334155;
+    --primary: #d0bcff;
+    --on-primary: #381e72;
+    --primary-container: #4f378b;
+    --on-primary-container: #eaddff;
+    --secondary-container: #4a4458;
+    --error: #f2b8b5;
+    --good: #7ddc8e;
+    --mid: #eec06c;
+    --surface: #141218;
+    --on-surface: #e6e0e9;
+    --on-surface-var: #cac4d0;
+    --surface-c-low: #1d1b20;
+    --surface-c-high: #2b2930;
+    --surface-c-highest: #36343b;
+    --outline: #938f99;
+    --outline-var: #49454f;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --emph: cubic-bezier(0.05, 0.7, 0.1, 1);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: "M PLUS Rounded 1c", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background: var(--surface);
+    color: var(--on-surface);
     padding: 16px;
   }
   .wrap { max-width: 900px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 14px; }
-  header h1 { font-size: 1.35rem; margin-bottom: 4px; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+  header { text-align: center; margin-bottom: 16px; }
+  header h1 { font-size: 1.6rem; font-weight: 800; }
   .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 22px;
-    margin-bottom: 14px;
+    background: var(--surface-c-low);
+    border: none;
+    border-radius: 28px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    animation: cardIn 0.45s var(--emph) backwards;
   }
-  .sub { color: var(--muted); font-size: 0.85rem; }
+  .sub { color: var(--on-surface-var); font-size: 0.85rem; }
   input[type=password] {
     width: 100%; max-width: 320px;
-    padding: 10px 12px; font-size: 0.95rem;
-    background: var(--card2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px; margin-top: 14px;
+    padding: 12px 16px; font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--surface-c-highest); color: var(--on-surface);
+    border: 1px solid var(--outline-var); border-radius: 16px; margin-top: 14px;
   }
-  input[type=password]:focus { outline: none; border-color: var(--accent); }
+  input[type=password]:focus { outline: none; border-color: var(--primary); }
   .btn {
-    background: var(--accent); color: #082f49; border: none; border-radius: 8px;
-    padding: 11px 22px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 12px;
+    background: var(--primary); color: var(--on-primary); border: none; border-radius: 999px;
+    padding: 12px 26px; font-size: 0.95rem; font-weight: 800; cursor: pointer; margin-top: 14px;
+    font-family: inherit; transition: transform 0.15s var(--spring), box-shadow 0.2s;
   }
-  .btn:hover { background: #7dd3fc; }
-  .err { color: var(--wrong); font-size: 0.85rem; margin-top: 8px; display: none; }
-  .okmsg { color: var(--correct); font-size: 0.85rem; margin-top: 8px; display: none; }
+  .btn:hover { box-shadow: 0 4px 14px rgba(208, 188, 255, 0.3); transform: translateY(-1px); }
+  .btn:active { transform: scale(0.95); }
+  .err { color: var(--error); font-size: 0.85rem; margin-top: 8px; display: none; }
+  .okmsg { color: var(--good); font-size: 0.85rem; margin-top: 8px; display: none; }
   input[type=password].sm { margin-top: 4px; }
-  h2 { font-size: 1.05rem; margin-bottom: 10px; }
+  h2 { font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-size: 0.78rem; font-weight: 600; }
-  .rate { font-weight: 700; }
-  .rate.good { color: var(--correct); }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--outline-var); }
+  th { color: var(--on-surface-var); font-size: 0.75rem; font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+  .rate { font-weight: 800; }
+  .rate.good { color: var(--good); }
   .rate.mid { color: var(--mid); }
-  .rate.bad { color: var(--wrong); }
+  .rate.bad { color: var(--error); }
   .bar-cell { min-width: 90px; }
-  .mini { height: 8px; background: var(--card2); border-radius: 999px; overflow: hidden; }
-  .mini > div { height: 100%; background: var(--accent); }
-  .refreshed { font-size: 0.75rem; color: var(--muted); text-align: right; }
-  .empty { color: var(--muted); font-size: 0.9rem; padding: 14px 0; }
+  .mini { height: 8px; background: var(--surface-c-highest); border-radius: 999px; overflow: hidden; }
+  .mini > div { height: 100%; background: var(--primary); border-radius: 999px; }
+  .refreshed { font-size: 0.75rem; color: var(--on-surface-var); text-align: right; }
+  .empty { color: var(--on-surface-var); font-size: 0.9rem; padding: 14px 0; }
   #dashArea { display: none; }
+
 </style>
 </head>
 <body>
