@@ -393,6 +393,7 @@ function showSignedIn() {
     $('loginHint').style.display = 'none';
     for (const el of document.querySelectorAll('.gameArea')) el.style.display = 'block';
     loadGame();
+    startQuiz();
   }
 }
 
@@ -410,6 +411,12 @@ function allItems() {
 
 async function loadGame() {
   const r = await fetch('/api/me?token=' + encodeURIComponent(token));
+  if (r.status === 401) {
+    localStorage.removeItem('quiz-token');
+    localStorage.removeItem('quiz-display');
+    location.reload();
+    return;
+  }
   if (!r.ok) return;
   me = await r.json();
   const items = allItems();
@@ -565,6 +572,7 @@ fetch('/terms').then(r => r.json()).then(d => {
   sel.add(new Option('すべて', 'すべて'));
   ['共通', 'ビジネス情報'].forEach(dep => sel.add(new Option(dep, dep)));
   cats.forEach(c => sel.add(new Option(c, 'cat:' + c)));
+  showSignedIn();
   startQuiz();
 });
 
@@ -585,6 +593,7 @@ function pool() {
 }
 
 function startQuiz() {
+  if (!token || !TERMS.length) return;
   const p = shuffle(pool());
   const n = $('countSel').value === 'all' ? p.length : Math.min(parseInt($('countSel').value), p.length);
   session = { qs: p.slice(0, n), idx: 0, correct: 0, streak: 0 };
