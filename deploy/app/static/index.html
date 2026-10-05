@@ -114,6 +114,13 @@
   .bossHp { height: 16px; background: var(--surface-c-highest); border-radius: 999px; overflow: hidden; margin: 8px 0; }
   .bossHp > div { height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); border-radius: 999px; transition: width 0.5s var(--spring); }
   .bossInfo { font-size: 0.8rem; color: var(--on-surface-var); display: flex; justify-content: space-between; }
+  .avatarWrap { position: relative; width: 200px; height: 200px; margin: 6px auto 10px; }
+  .avatarWrap img { position: absolute; image-rendering: pixelated; }
+  .avBase { inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .av_armor { left: 18%; top: 40%; width: 64%; height: 58%; object-fit: contain; }
+  .av_acc { left: 36%; top: 52%; width: 28%; height: 30%; object-fit: contain; }
+  .av_weapon { left: 52%; top: 14%; width: 48%; height: 78%; object-fit: contain; }
+  .itico { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; vertical-align: middle; }
   .gachaBtn { width: 100%; padding: 14px; font-size: 1rem; }
   #gachaResult { margin-top: 10px; font-size: 0.9rem; min-height: 1.2em; }
   #gachaResult .rar { font-weight: 800; }
@@ -285,6 +292,7 @@
   <div class="card gameArea" id="charCard">
     <h2>キャラ <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span> <span class="sub">連続ログイン <b id="streakVal">0</b>日</span></h2>
     <div class="rankBadge"><span class="letter" id="rankVal">E</span><span class="title" id="rankTitle">ただの生徒</span></div>
+    <div class="avatarWrap" id="avatarWrap"><img class="avBase" src="/sprites/bird.png" alt="キャラ"></div>
     <div class="mission"><div class="mbar"><div id="rankBar"></div></div><div class="rankNext" id="rankNext"></div></div>
     <div id="gameNotice"></div>
     <div class="eq" id="equipList"></div>
@@ -414,6 +422,10 @@ async function loadGame() {
   const prev = me.next_at ? ({ 20: 0, 50: 20, 100: 50, 200: 100, 400: 200, 800: 400 }[me.next_at] || 0) : 800;
   $('rankBar').style.width = me.next_at ? Math.min(100, (me.total - prev) / (me.next_at - prev) * 100) + '%' : '100%';
   $('gameNotice').textContent = me.login_bonus ? `ログインボーナス +${me.login_bonus}pt!` : '';
+  $('avatarWrap').innerHTML = '<img class="avBase" src="/sprites/bird.png" alt="キャラ">' +
+    ['armor', 'acc', 'weapon'].map(s =>
+      me.equipped[s] ? `<img class="avLay av_${s}" src="/sprites/${me.equipped[s]}.png" alt="">` : ''
+    ).join('');
   $('equipList').innerHTML = ['weapon', 'armor', 'acc'].map(s => {
     const id = me.equipped[s];
     const it = id ? items[id] : null;
@@ -450,7 +462,7 @@ async function loadGame() {
       const equipped = me.equipped[slot] === id;
       const label2 = equipped ? '装備中（外す）' : owned ? '装備する' : `${it.price}pt`;
       const cls = equipped ? 'buy equipped' : owned ? 'buy owned' : 'buy';
-      return `<div class="shopItem"><div class="meta">${it.name}<small>つよさ+${it.power}</small></div>
+      return `<div class="shopItem"><div class="meta"><img class="itico" src="/sprites/${id}.png" alt=""> ${it.name}<small>つよさ+${it.power}</small></div>
         <button class="${cls}" onclick="shop('${id}')">${label2}</button></div>`;
     }).join('')
   ).join('');
@@ -460,7 +472,7 @@ async function loadGame() {
     $('shopList').innerHTML += '<div class="slotName">ガチャ産アイテム（装備）</div>' +
       gachaOwned.map(i => {
         const equipped = me.equipped[i.slot] === i.id;
-        return `<div class="shopItem"><div class="meta">${i.name} <span class="rar rar-${i.rarity}">${i.rarity}</span><small>${SLOT_LABEL[i.slot]} つよさ+${i.power}</small></div>
+        return `<div class="shopItem"><div class="meta"><img class="itico" src="/sprites/${i.id}.png" alt=""> ${i.name} <span class="rar rar-${i.rarity}">${i.rarity}</span><small>${SLOT_LABEL[i.slot]} つよさ+${i.power}</small></div>
           <button class="buy ${equipped ? 'equipped' : 'owned'}" onclick="equipIt('${i.id}')">${equipped ? '装備中（外す）' : '装備する'}</button></div>`;
       }).join('');
   }
@@ -528,7 +540,7 @@ $('gachaBtn').onclick = async () => {
   if (!r.ok) { $('gachaResult').textContent = d.error || 'エラー'; return; }
   const it = d.item;
   $('gachaResult').innerHTML =
-    `<span class="rar rar-${it.rarity}">[${it.rarity}]</span> <b>${it.name}</b>（${SLOT_LABEL[it.slot]} つよさ+${it.power}）` +
+    `<img class="itico" src="/sprites/${it.id}.png" alt=""> <span class="rar rar-${it.rarity}">[${it.rarity}]</span> <b>${it.name}</b>（${SLOT_LABEL[it.slot]} つよさ+${it.power}）` +
     (d.dup ? ' — ダブり！50pt返還' : '');
   if (me) { me.points = d.points; $('pointVal').textContent = d.points; }
   loadGame();
