@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -62,6 +63,9 @@ def get_db() -> sqlite3.Connection:
     )
     conn.execute(
         "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)"
     )
     for col in ("login_streak", "best_streak", "lifetime", "gacha_count"):
         try:
@@ -427,7 +431,7 @@ def post_answer(a: AnswerIn):
     sess = verify_token(conn, a.token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     student = f"{sess['email'].split('@')[0]} {sess['name']}"[:50]
     conn.execute(
         "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)",
@@ -482,7 +486,7 @@ def get_me(token: str = ""):
     sess = verify_token(conn, token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     u = get_user(conn, sess["email"], sess["name"])
     today = today_jst()
     bonus = 0
@@ -543,7 +547,7 @@ def post_buy(b: BuyIn):
     sess = verify_token(conn, b.token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     item = ITEMS.get(b.item)
     if not item:
         conn.close()
@@ -577,7 +581,7 @@ def post_equip(e: EquipIn):
     sess = verify_token(conn, e.token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     if e.slot not in ("weapon", "armor", "acc"):
         conn.close()
         raise HTTPException(400, "bad slot")
@@ -608,7 +612,7 @@ def get_ranking(token: str = ""):
     sess = verify_token(conn, token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     users = conn.execute("SELECT email, name, points, login_streak FROM users").fetchall()
     eqs = conn.execute("SELECT email, item FROM equipped").fetchall()
     tot_map = {}
@@ -655,7 +659,7 @@ def post_gacha(g: GachaIn):
     sess = verify_token(conn, g.token)
     if not sess:
         conn.close()
-        raise HTTPException(401, "Googleログインしてください")
+        raise HTTPException(401, "ログインしてください")
     u = get_user(conn, sess["email"], sess["name"])
     COST = 100
     if u["points"] < COST:
@@ -683,6 +687,53 @@ def post_gacha(g: GachaIn):
         "points": u["points"] - COST + refund + sum(x["bonus"] for x in new_ach),
         "ach_new": new_ach,
     }
+
+
+class StudentLoginIn(BaseModel):
+    cls: str = ""
+    num: str = ""
+    name: str = ""
+    pin: str = ""
+
+
+@app.post("/api/student_login")
+def post_student_login(s: StudentLoginIn):
+    sid = re.sub(r"[|@\s]", "", f"{s.cls}-{s.num}")[:24]
+    name = s.name.replace("|", "").strip()[:30]
+    if not sid or sid == "-" or not name:
+        raise HTTPException(400, "クラス・番号・名前を入れてください")
+    if len(s.pin) < 4:
+        raise HTTPException(400, "PINは4文字以上にしてください")
+    conn = get_db()
+    stored = conn.execute("SELECT pin FROM pins WHERE email=?", (sid,)).fetchone()
+    h = hashlib.sha256(s.pin.encode()).hexdigest()
+    if stored:
+        if stored[0] != h:
+            conn.close()
+            raise HTTPException(403, "PINが違います（忘れたら先生にリセットしてもらって）")
+    else:
+        conn.execute("INSERT INTO pins (email, pin) VALUES (?, ?)", (sid, h))
+        conn.commit()
+    tok = make_token(conn, sid, name)
+    conn.close()
+    return {"token": tok, "display": f"{sid} {name}"}
+
+
+class PinResetIn(BaseModel):
+    pw: str
+    sid: str
+
+
+@app.post("/api/pin_reset")
+def post_pin_reset(p: PinResetIn):
+    conn = get_db()
+    if not pw_matches(conn, p.pw):
+        conn.close()
+        raise HTTPException(403, "forbidden")
+    conn.execute("DELETE FROM pins WHERE email=?", (p.sid[:24],))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 class PasswordIn(BaseModel):

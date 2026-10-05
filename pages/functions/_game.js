@@ -121,6 +121,7 @@ export async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS achievements (email TEXT, key TEXT, ts REAL, PRIMARY KEY (email, key))",
     "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
+    "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
   ];
   for (const s of stmts) await env.DB.prepare(s).run();
   const alters = [
@@ -348,6 +349,11 @@ export async function verifySession(env, token) {
   const [email, name, exp] = payload.split("|");
   if (Number(exp) < Date.now()) return null;
   return { email, name };
+}
+
+export async function hashPw(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export function json(obj, status = 200) {

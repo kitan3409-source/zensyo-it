@@ -8,7 +8,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "bad request" }, 400);
   }
   const sess = await verifySession(env, b.token);
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   const u = await getUser(env, sess.email, sess.name);
   const COST = 100;
   if ((u.points || 0) < COST) return json({ error: `ポイントが足りません（${COST}pt必要）` }, 400);

@@ -11,7 +11,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "bad request" }, 400);
   }
   const sess = await verifySession(env, b.token);
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
   await env.DB.prepare(
     "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"

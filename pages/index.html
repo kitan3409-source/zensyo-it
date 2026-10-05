@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>情報処理1級 4択クイズ</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
@@ -68,7 +67,7 @@
     gap: 8px;
     margin-bottom: 8px;
   }
-  .controls input[type=text], .controls select {
+  .controls input[type=text], .controls input[type=password], .controls select {
     padding: 10px 14px;
     font-size: 0.85rem;
     font-family: inherit;
@@ -80,11 +79,11 @@
   }
   .controls input[type=text] { flex: 1.2; }
   .controls select { flex: 1; }
-  .controls input[type=text].need { border-color: var(--error); }
+  .controls input[type=text].need, .controls input[type=password].need { border-color: var(--error); }
   #signedIn { font-size: 0.85rem; align-self: center; }
   #signedIn b { color: var(--primary); }
   #logoutLink { color: var(--outline); font-size: 0.75rem; margin-left: 8px; }
-  #loginHint { color: var(--error); font-size: 0.8rem; display: none; margin-top: 4px; }
+  #loginHint { color: var(--on-surface-var); font-size: 0.8rem; margin-top: 6px; }
   .gameArea { display: none; }
   .gameArea h2 { font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; display: flex; gap: 14px; align-items: baseline; }
   .gameArea h2 .sub { font-size: 0.75rem; color: var(--on-surface-var); font-weight: 400; }
@@ -245,9 +244,15 @@
 
   <div class="controls">
     <div id="signinArea" style="flex:1">
-      <div id="gbtn"></div>
+      <div id="manualLogin" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="inCls" placeholder="クラス(例:2-5)" style="width:6.5em">
+        <input type="text" id="inNum" placeholder="番号" style="width:4em">
+        <input type="text" id="inName" placeholder="名前" style="width:9em">
+        <input type="password" id="inPin" placeholder="PIN(4文字以上)" style="width:9em">
+        <button class="btn" id="loginBtn" style="margin-top:0;padding:10px 18px">ログイン</button>
+      </div>
       <div id="signedIn" style="display:none">ログイン中: <b id="who"></b><a href="#" id="logoutLink">切替</a></div>
-      <div id="loginHint">← 学校のGoogleアカウントでログインしてね</div>
+      <div id="loginHint">← 初回はPINを決めて登録、2回目以降はそのPINでログイン</div>
     </div>
   </div>
   <div class="controls">
@@ -347,31 +352,22 @@ const $ = (id) => document.getElementById(id);
 
 let token = localStorage.getItem('quiz-token') || '';
 
-fetch('/api/config').then(r => r.json()).then(c => {
-  if (!c.client_id) { $('loginHint').textContent = 'ログイン未設定（client_idがありません）'; $('loginHint').style.display = 'block'; return; }
-  const tryInit = (n) => {
-    if (window.google && google.accounts && google.accounts.id) {
-      google.accounts.id.initialize({ client_id: c.client_id, callback: onGoogle });
-      google.accounts.id.renderButton($('gbtn'), { theme: 'filled_black', size: 'medium', text: 'signin_with', locale: 'ja' });
-      showSignedIn();
-    } else if (n < 100) {
-      setTimeout(() => tryInit(n + 1), 100);
-    } else {
-      $('loginHint').textContent = 'Googleログインを読み込めません（再読み込みしてね）';
-      $('loginHint').style.display = 'block';
-    }
-  };
-  tryInit(0);
-});
+$('loginBtn').onclick = doLogin;
+$('inPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+$('inName').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 
-async function onGoogle(res) {
-  const r = await fetch('/api/login', {
+async function doLogin() {
+  const body = {
+    cls: $('inCls').value.trim(), num: $('inNum').value.trim(),
+    name: $('inName').value.trim(), pin: $('inPin').value
+  };
+  const r = await fetch('/api/student_login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ credential: res.credential })
+    body: JSON.stringify(body)
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { $('loginHint').textContent = d.error || 'ログインに失敗しました'; $('loginHint').style.display = 'block'; return; }
+  if (!r.ok) { $('loginHint').textContent = d.error || 'ログインに失敗しました'; $('loginHint').style.color = 'var(--bad)'; return; }
   token = d.token;
   localStorage.setItem('quiz-token', token);
   localStorage.setItem('quiz-display', d.display);
@@ -383,7 +379,7 @@ function showSignedIn() {
   if (token && disp) {
     $('who').textContent = disp;
     $('signedIn').style.display = 'block';
-    $('gbtn').style.display = 'none';
+    $('manualLogin').style.display = 'none';
     $('loginHint').style.display = 'none';
     for (const el of document.querySelectorAll('.gameArea')) el.style.display = 'block';
     loadGame();

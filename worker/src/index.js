@@ -33,9 +33,51 @@ export default {
       return json({ token, display: `${email.split("@")[0]} ${name}` });
     }
 
+    if (url.pathname === "/api/student_login" && request.method === "POST") {
+      let b;
+      try {
+        b = await request.json();
+      } catch {
+        return json({ error: "bad request" }, 400);
+      }
+      const sid = `${b.cls || ""}-${b.num || ""}`.replace(/[|@\s]/g, "").slice(0, 24);
+      const name = String(b.name || "").replace(/\|/g, "").trim().slice(0, 30);
+      const pin = String(b.pin || "");
+      if (!sid || sid === "-" || !name) return json({ error: "クラス・番号・名前を入れてください" }, 400);
+      if (pin.length < 4) return json({ error: "PINは4文字以上にしてください" }, 400);
+      await ensureGameTables(env);
+      const stored = await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(sid).first();
+      const hash = await hashPw(pin);
+      if (stored) {
+        if (stored.pin !== hash) return json({ error: "PINが違います（忘れたら先生にリセットしてもらって）" }, 403);
+      } else {
+        await env.DB.prepare("INSERT INTO pins (email, pin) VALUES (?, ?)").bind(sid, hash).run();
+      }
+      const secret = await getSecret(env);
+      const exp = Date.now() + 7 * 24 * 3600 * 1000;
+      const payload = `${sid}|${name}|${exp}`;
+      const sig = await hmacSha256(secret, payload);
+      return json({ token: b64e(payload) + "." + sig, display: `${sid} ${name}` });
+    }
+
+    if (url.pathname === "/api/pin_reset" && request.method === "POST") {
+      let b;
+      try {
+        b = await request.json();
+      } catch {
+        return json({ error: "bad request" }, 400);
+      }
+      if (!(await pwMatches(env, b.pw || ""))) return json({ error: "forbidden" }, 403);
+      const sid = String(b.sid || "").slice(0, 24);
+      if (!sid) return json({ error: "bad sid" }, 400);
+      await ensureGameTables(env);
+      await env.DB.prepare("DELETE FROM pins WHERE email=?").bind(sid).run();
+      return json({ ok: true });
+    }
+
     if (url.pathname === "/api/me") {
       const sess = await verifySession(env, url.searchParams.get("token") || "");
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       const u = await getUser(env, sess.email, sess.name);
       const today = todayJST();
       let bonus = 0;
@@ -89,7 +131,7 @@ export default {
       const b = await body(request);
       if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       const item = ITEMS[b.item];
       if (!item) return json({ error: "アイテムがありません" }, 400);
       const u = await getUser(env, sess.email, sess.name);
@@ -110,7 +152,7 @@ export default {
       const b = await body(request);
       if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       const u = await getUser(env, sess.email, sess.name);
       const COST = 100;
       if ((u.points || 0) < COST) return json({ error: `ポイントが足りません（${COST}pt必要）` }, 400);
@@ -148,7 +190,7 @@ export default {
       const b = await body(request);
       if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       if (!["weapon", "armor", "acc"].includes(b.slot)) return json({ error: "bad slot" }, 400);
       await ensureGameTables(env);
       const allItems = { ...ITEMS };
@@ -171,7 +213,7 @@ export default {
 
     if (url.pathname === "/api/ranking") {
       const sess = await verifySession(env, url.searchParams.get("token") || "");
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       await ensureGameTables(env);
       const users = await env.DB.prepare("SELECT email, name, points, login_streak FROM users").all();
       const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
@@ -221,7 +263,7 @@ export default {
       const b = await body(request);
       if (!b) return json({ error: "bad request" }, 400);
       const sess = await verifySession(env, b.token);
-      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      if (!sess) return json({ error: "ログインしてください" }, 401);
       const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
       if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
       try {
@@ -484,6 +526,7 @@ async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS achievements (email TEXT, key TEXT, ts REAL, PRIMARY KEY (email, key))",
     "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
+    "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
   ];
   for (const s of stmts) await env.DB.prepare(s).run();
   const alters = [

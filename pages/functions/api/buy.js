@@ -8,7 +8,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "bad request" }, 400);
   }
   const sess = await verifySession(env, b.token);
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   const item = ITEMS[b.item];
   if (!item) return json({ error: "アイテムがありません" }, 400);
   const u = await getUser(env, sess.email, sess.name);

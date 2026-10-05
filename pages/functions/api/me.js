@@ -6,7 +6,7 @@ import {
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const sess = await verifySession(env, url.searchParams.get("token") || "");
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   const u = await getUser(env, sess.email, sess.name);
   const today = todayJST();
   let bonus = 0;

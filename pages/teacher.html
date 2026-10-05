@@ -81,6 +81,7 @@
   .mini > div { height: 100%; background: var(--primary); border-radius: 999px; }
   .refreshed { font-size: 0.75rem; color: var(--on-surface-var); text-align: right; }
   .empty { color: var(--on-surface-var); font-size: 0.9rem; padding: 14px 0; }
+  .pinBtn { background: var(--secondary-container); color: var(--on-surface); border: none; border-radius: 999px; padding: 5px 12px; font-size: 0.72rem; font-family: inherit; cursor: pointer; }
   #dashArea { display: none; }
 
 </style>
@@ -104,7 +105,7 @@
     <div class="card">
       <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
       <table>
-        <thead><tr><th>ID / 名前</th><th>ランク</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>連続ログイン</th><th>最終回答</th></tr></thead>
+        <thead><tr><th>ID / 名前</th><th>ランク</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>連続ログイン</th><th>最終回答</th><th>PIN</th></tr></thead>
         <tbody id="studentRows"></tbody>
       </table>
       <div class="empty" id="noStudents">まだ回答がありません</div>
@@ -173,6 +174,7 @@ async function load() {
       <td>${s.power || 100}</td>
       <td>${s.streak || 0}日</td>
       <td>${fmtTime(s.last_ts)}</td>
+      <td><button class="pinBtn" data-sid="${esc(String(s.student).split(' ')[0])}">リセット</button></td>
     </tr>`).join('');
 
   if (d.boss) {
@@ -190,6 +192,16 @@ async function load() {
       <td>${t.answered}</td>
       <td class="rate ${rateClass(t.rate)}">${t.rate}%</td>
     </tr>`).join('');
+  for (const b of document.querySelectorAll('.pinBtn')) {
+    b.onclick = async () => {
+      if (!confirm(`ID「${b.dataset.sid}」のPINをリセットしますか？（生徒は再登録になります）`)) return;
+      const r = await fetch('/api/pin_reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pw, sid: b.dataset.sid })
+      });
+      b.textContent = r.ok ? '解除済' : '失敗';
+    };
+  }
   $('ts').textContent = new Date().toLocaleTimeString('ja-JP');
 }
 

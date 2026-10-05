@@ -8,7 +8,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "bad request" }, 400);
   }
   const sess = await verifySession(env, b.token);
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   if (!["weapon", "armor", "acc"].includes(b.slot)) return json({ error: "bad slot" }, 400);
   await ensureGameTables(env);
   const all = allItems();

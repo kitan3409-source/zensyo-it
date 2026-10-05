@@ -3,7 +3,7 @@ import { allItems, rankOf, ensureGameTables, verifySession, json } from "../_gam
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const sess = await verifySession(env, url.searchParams.get("token") || "");
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
+  if (!sess) return json({ error: "ログインしてください" }, 401);
   await ensureGameTables(env);
   const users = await env.DB.prepare("SELECT email, name, points, login_streak FROM users").all();
   const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();

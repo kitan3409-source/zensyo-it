@@ -47,3 +47,8 @@ CREATE TABLE IF NOT EXISTS boss_damage (
   dmg INTEGER DEFAULT 0,
   PRIMARY KEY (email, boss_id)
 );
+
+CREATE TABLE IF NOT EXISTS pins (
+  email TEXT PRIMARY KEY,
+  pin TEXT
+);
