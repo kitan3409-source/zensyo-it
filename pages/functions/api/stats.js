@@ -1,6 +1,6 @@
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  if ((url.searchParams.get("pw") || "") !== (env.TEACHER_PW || "sensei")) {
+  if ((url.searchParams.get("pw") || "") !== (await getPw(env))) {
     return json({ error: "forbidden" }, 403);
   }
   const students = await env.DB.prepare(
@@ -25,6 +25,18 @@ export async function onRequestGet({ request, env }) {
       rate: rate(r),
     })),
   });
+}
+
+async function getPw(env) {
+  try {
+    await env.DB.prepare(
+      "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+    ).run();
+    const r = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
+    return (r && r.value) || env.TEACHER_PW || "sensei";
+  } catch {
+    return env.TEACHER_PW || "sensei";
+  }
 }
 
 function json(obj, status = 200) {

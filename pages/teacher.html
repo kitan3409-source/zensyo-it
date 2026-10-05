@@ -48,6 +48,8 @@
   }
   .btn:hover { background: #7dd3fc; }
   .err { color: var(--wrong); font-size: 0.85rem; margin-top: 8px; display: none; }
+  .okmsg { color: var(--correct); font-size: 0.85rem; margin-top: 8px; display: none; }
+  input[type=password].sm { margin-top: 4px; }
   h2 { font-size: 1.05rem; margin-bottom: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
@@ -91,6 +93,13 @@
         <tbody id="termRows"></tbody>
       </table>
       <div class="empty" id="noTerms">まだ回答がありません</div>
+    </div>
+    <div class="card">
+      <h2>パスワード変更</h2>
+      <input type="password" class="sm" id="newPw" placeholder="新しいパスワード（4文字以上）">
+      <div class="err" id="pwMsg"></div>
+      <div class="okmsg" id="pwOk">変更しました</div>
+      <button class="btn" id="pwBtn">変更</button>
     </div>
     <div class="refreshed">10秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
   </div>
@@ -158,6 +167,27 @@ $('loginBtn').onclick = () => {
   load();
 };
 $('pwInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
+
+$('pwBtn').onclick = async () => {
+  const np = $('newPw').value.trim();
+  $('pwMsg').style.display = 'none';
+  $('pwOk').style.display = 'none';
+  const res = await fetch('/api/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pw, new_pw: np })
+  });
+  if (res.ok) {
+    pw = np;
+    sessionStorage.setItem('teacher-pw', pw);
+    $('newPw').value = '';
+    $('pwOk').style.display = 'block';
+  } else {
+    const d = await res.json().catch(() => ({}));
+    $('pwMsg').textContent = d.error || `変更に失敗しました（${res.status}）`;
+    $('pwMsg').style.display = 'block';
+  }
+};
 
 if (pw) load();
 setInterval(() => { if (pw) load(); }, 10000);

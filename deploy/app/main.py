@@ -30,7 +30,15 @@ def get_db() -> sqlite3.Connection:
         )
         """
     )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+    )
     return conn
+
+
+def get_pw(conn: sqlite3.Connection) -> str:
+    row = conn.execute("SELECT value FROM settings WHERE key='pw'").fetchone()
+    return row[0] if row and row[0] else TEACHER_PASSWORD
 
 
 class AnswerIn(BaseModel):
@@ -55,11 +63,33 @@ def post_answer(a: AnswerIn):
     return {"ok": True}
 
 
+class PasswordIn(BaseModel):
+    pw: str
+    new_pw: str
+
+
+@app.post("/api/password")
+def post_password(p: PasswordIn):
+    conn = get_db()
+    if p.pw != get_pw(conn):
+        conn.close()
+        raise HTTPException(403, "forbidden")
+    np = p.new_pw.strip()
+    if len(np) < 4:
+        conn.close()
+        raise HTTPException(400, "4文字以上にしてください")
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('pw', ?)", (np,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 @app.get("/api/stats")
 def get_stats(pw: str = ""):
-    if pw != TEACHER_PASSWORD:
-        raise HTTPException(403, "forbidden")
     conn = get_db()
+    if pw != get_pw(conn):
+        conn.close()
+        raise HTTPException(403, "forbidden")
     students = [
         {
             "student": r[0],
