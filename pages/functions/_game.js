@@ -205,9 +205,9 @@ export async function getTermsMap(env, origin) {
   if (TERMS_MAP) return TERMS_MAP;
   try {
     const r = await env.ASSETS.fetch(new Request(origin + "/terms.json"));
-    const arr = await r.json();
+    const j = await r.json();
     TERMS_MAP = {};
-    for (const t of arr) TERMS_MAP[t.term] = t.category;
+    for (const t of (j.terms || j)) TERMS_MAP[t.term] = t.category;
   } catch {}
   return TERMS_MAP || {};
 }

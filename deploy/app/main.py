@@ -241,7 +241,8 @@ def get_terms_map() -> dict:
         return _TERMS_MAP
     _TERMS_MAP = {}
     try:
-        for t in json.loads((STATIC_DIR / "terms.json").read_text()):
+        j = json.loads((STATIC_DIR / "terms.json").read_text())
+        for t in j.get("terms", j):
             _TERMS_MAP[t["term"]] = t.get("category", "その他")
     except Exception:
         pass
