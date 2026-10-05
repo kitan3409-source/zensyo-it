@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sqlite3
 import time
@@ -36,9 +37,11 @@ def get_db() -> sqlite3.Connection:
     return conn
 
 
-def get_pw(conn: sqlite3.Connection) -> str:
+def pw_matches(conn: sqlite3.Connection, submitted: str) -> bool:
     row = conn.execute("SELECT value FROM settings WHERE key='pw'").fetchone()
-    return row[0] if row and row[0] else TEACHER_PASSWORD
+    if row and row[0]:
+        return row[0] in (hashlib.sha256(submitted.encode()).hexdigest(), submitted)
+    return submitted == TEACHER_PASSWORD
 
 
 class AnswerIn(BaseModel):
@@ -71,14 +74,17 @@ class PasswordIn(BaseModel):
 @app.post("/api/password")
 def post_password(p: PasswordIn):
     conn = get_db()
-    if p.pw != get_pw(conn):
+    if not pw_matches(conn, p.pw):
         conn.close()
         raise HTTPException(403, "forbidden")
     np = p.new_pw.strip()
     if len(np) < 4:
         conn.close()
         raise HTTPException(400, "4文字以上にしてください")
-    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('pw', ?)", (np,))
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('pw', ?)",
+        (hashlib.sha256(np.encode()).hexdigest(),),
+    )
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -87,7 +93,7 @@ def post_password(p: PasswordIn):
 @app.get("/api/stats")
 def get_stats(pw: str = ""):
     conn = get_db()
-    if pw != get_pw(conn):
+    if not pw_matches(conn, pw):
         conn.close()
         raise HTTPException(403, "forbidden")
     students = [
