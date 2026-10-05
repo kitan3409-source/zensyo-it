@@ -1,3 +1,5 @@
+import { getUser, bumpMission, verifySession, json } from "../_game.js";
+
 export async function onRequestPost({ request, env }) {
   let b;
   try {
@@ -19,59 +21,20 @@ export async function onRequestPost({ request, env }) {
       Date.now() / 1000
     )
     .run();
-  return json({ ok: true });
-}
-
-function b64d(s) {
-  return decodeURIComponent(escape(atob(s)));
-}
-
-async function hmacSha256(secret, msg) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const buf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function getSecret(env) {
-  await env.DB.prepare(
-    "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
-  ).run();
-  const r = await env.DB.prepare("SELECT value FROM settings WHERE key='session_secret'").first();
-  if (r && r.value) return r.value;
-  const s = [...crypto.getRandomValues(new Uint8Array(16))]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
-  ).bind(s).run();
-  return s;
-}
-
-async function verifySession(env, token) {
-  if (!token || !token.includes(".")) return null;
-  const [b64, sig] = token.split(".");
-  let payload;
-  try {
-    payload = b64d(b64);
-  } catch {
-    return null;
+  const earned = b.correct ? 10 : 2;
+  const u = await getUser(env, sess.email, sess.name);
+  const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
+  await env.DB.prepare("UPDATE users SET points=points+?, cur_streak=? WHERE email=?")
+    .bind(earned, streak, sess.email).run();
+  const doneM = [];
+  const m1 = await bumpMission(env, sess.email, "ans10", 1, true);
+  if (m1) doneM.push(m1);
+  if (b.correct) {
+    const m2 = await bumpMission(env, sess.email, "cor15", 1, true);
+    if (m2) doneM.push(m2);
+    const m3 = await bumpMission(env, sess.email, "str8", streak, false);
+    if (m3) doneM.push(m3);
   }
-  const secret = await getSecret(env);
-  if ((await hmacSha256(secret, payload)) !== sig) return null;
-  const [email, name, exp] = payload.split("|");
-  if (Number(exp) < Date.now()) return null;
-  return { email, name };
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+  const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0);
+  return json({ ok: true, earned, points, missions_done: doneM });
 }

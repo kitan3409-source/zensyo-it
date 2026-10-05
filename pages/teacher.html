@@ -80,7 +80,7 @@
     <div class="card">
       <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
       <table>
-        <thead><tr><th>ID / 名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>最終回答</th></tr></thead>
+        <thead><tr><th>ID / 名前</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>最終回答</th></tr></thead>
         <tbody id="studentRows"></tbody>
       </table>
       <div class="empty" id="noStudents">まだ回答がありません</div>
@@ -144,6 +144,8 @@ async function load() {
       <td>${s.correct}</td>
       <td class="rate ${rateClass(s.rate)}">${s.rate}%</td>
       <td class="bar-cell"><div class="mini"><div style="width:${s.rate}%"></div></div></td>
+      <td>${s.points || 0}</td>
+      <td>${s.power || 100}</td>
       <td>${fmtTime(s.last_ts)}</td>
     </tr>`).join('');
 

@@ -1,3 +1,5 @@
+import { b64e, getSecret, hmacSha256, json } from "../_game.js";
+
 export async function onRequestPost({ request, env }) {
   let b;
   try {
@@ -23,42 +25,4 @@ export async function onRequestPost({ request, env }) {
   const sig = await hmacSha256(secret, payload);
   const token = b64e(payload) + "." + sig;
   return json({ token, display: `${email.split("@")[0]} ${name}` });
-}
-
-function b64e(s) {
-  return btoa(unescape(encodeURIComponent(s)));
-}
-
-async function hmacSha256(secret, msg) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const buf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function getSecret(env) {
-  await env.DB.prepare(
-    "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
-  ).run();
-  const r = await env.DB.prepare("SELECT value FROM settings WHERE key='session_secret'").first();
-  if (r && r.value) return r.value;
-  const s = [...crypto.getRandomValues(new Uint8Array(16))]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
-  ).bind(s).run();
-  return s;
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
 }

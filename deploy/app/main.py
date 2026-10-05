@@ -42,6 +42,18 @@ def get_db() -> sqlite3.Connection:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
     )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0, last_login TEXT DEFAULT '', cur_streak INTEGER DEFAULT 0)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS inventory (email TEXT, item TEXT, PRIMARY KEY (email, item))"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS equipped (email TEXT, slot TEXT, item TEXT, PRIMARY KEY (email, slot))"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS missions (email TEXT, day TEXT, key TEXT, progress INTEGER DEFAULT 0, claimed INTEGER DEFAULT 0, PRIMARY KEY (email, day, key))"
+    )
     return conn
 
 
@@ -76,6 +88,87 @@ def verify_token(conn: sqlite3.Connection, token: str):
     if len(parts) < 3 or float(parts[2]) < time.time() * 1000:
         return None
     return {"email": parts[0], "name": parts[1]}
+
+
+ITEMS = {
+    "w1": {"name": "エンピツソード", "slot": "weapon", "power": 10, "price": 50},
+    "w2": {"name": "計算機ブレード", "slot": "weapon", "power": 30, "price": 150},
+    "w3": {"name": "サーバーブレード", "slot": "weapon", "power": 80, "price": 400},
+    "a1": {"name": "学生服", "slot": "armor", "power": 10, "price": 50},
+    "a2": {"name": "ビジネススーツ", "slot": "armor", "power": 30, "price": 150},
+    "a3": {"name": "デバッグアーマー", "slot": "armor", "power": 80, "price": 400},
+    "x1": {"name": "USBメモリ", "slot": "acc", "power": 15, "price": 80},
+    "x2": {"name": "電卓のお守り", "slot": "acc", "power": 40, "price": 200},
+    "x3": {"name": "光ファイバー", "slot": "acc", "power": 100, "price": 500},
+}
+
+MISSIONS = {
+    "ans10": {"desc": "10問回答する", "goal": 10, "bonus": 60},
+    "cor15": {"desc": "15問正解する", "goal": 15, "bonus": 100},
+    "str8": {"desc": "8問連続正解する", "goal": 8, "bonus": 80},
+}
+
+
+def today_jst() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 9 * 3600))
+
+
+def get_user(conn: sqlite3.Connection, email: str, name: str) -> dict:
+    row = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    if not row:
+        conn.execute("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)", (email, name))
+        conn.commit()
+        return {"email": email, "name": name, "points": 0, "last_login": "", "cur_streak": 0}
+    u = dict(zip(["email", "name", "points", "last_login", "cur_streak"], row))
+    if name and name != u["name"]:
+        conn.execute("UPDATE users SET name=? WHERE email=?", (name, email))
+        conn.commit()
+        u["name"] = name
+    return u
+
+
+def get_power(conn: sqlite3.Connection, email: str) -> int:
+    rows = conn.execute("SELECT item FROM equipped WHERE email=?", (email,)).fetchall()
+    p = 100
+    for (it,) in rows:
+        if it in ITEMS:
+            p += ITEMS[it]["power"]
+    return p
+
+
+def bump_mission(conn: sqlite3.Connection, email: str, key: str, val: int, additive: bool):
+    day = today_jst()
+    m = MISSIONS[key]
+    row = conn.execute(
+        "SELECT progress, claimed FROM missions WHERE email=? AND day=? AND key=?",
+        (email, day, key),
+    ).fetchone()
+    if not row:
+        conn.execute(
+            "INSERT INTO missions (email, day, key, progress, claimed) VALUES (?, ?, ?, ?, 0)",
+            (email, day, key, min(val, m["goal"])),
+        )
+        conn.commit()
+        progress, claimed = min(val, m["goal"]), 0
+    else:
+        progress, claimed = row
+        if not claimed and progress < m["goal"]:
+            np = min(m["goal"], progress + val if additive else val)
+            conn.execute(
+                "UPDATE missions SET progress=? WHERE email=? AND day=? AND key=?",
+                (np, email, day, key),
+            )
+            conn.commit()
+            progress = np
+    if not claimed and progress >= m["goal"]:
+        conn.execute(
+            "UPDATE missions SET claimed=1 WHERE email=? AND day=? AND key=?",
+            (email, day, key),
+        )
+        conn.execute("UPDATE users SET points=points+? WHERE email=?", (m["bonus"], email))
+        conn.commit()
+        return {"desc": m["desc"], "bonus": m["bonus"]}
+    return None
 
 
 def pw_matches(conn: sqlite3.Connection, submitted: str) -> bool:
@@ -133,8 +226,144 @@ def post_answer(a: AnswerIn):
         (student, a.term[:200], a.direction[:10], int(a.correct), time.time()),
     )
     conn.commit()
+    earned = 10 if a.correct else 2
+    u = get_user(conn, sess["email"], sess["name"])
+    streak = (u["cur_streak"] or 0) + 1 if a.correct else 0
+    conn.execute("UPDATE users SET points=points+?, cur_streak=? WHERE email=?", (earned, streak, sess["email"]))
+    conn.commit()
+    done = []
+    for key, val, additive in ([("ans10", 1, True)] + ([("cor15", 1, True), ("str8", streak, False)] if a.correct else [])):
+        m = bump_mission(conn, sess["email"], key, val, additive)
+        if m:
+            done.append(m)
+    points = (u["points"] or 0) + earned + sum(x["bonus"] for x in done)
     conn.close()
-    return {"ok": True}
+    return {"ok": True, "earned": earned, "points": points, "missions_done": done}
+
+
+@app.get("/api/me")
+def get_me(token: str = ""):
+    conn = get_db()
+    sess = verify_token(conn, token)
+    if not sess:
+        conn.close()
+        raise HTTPException(401, "Googleログインしてください")
+    u = get_user(conn, sess["email"], sess["name"])
+    today = today_jst()
+    bonus = 0
+    if u["last_login"] != today:
+        bonus = 30
+        conn.execute("UPDATE users SET last_login=?, points=points+30 WHERE email=?", (today, sess["email"]))
+        conn.commit()
+        u["points"] += 30
+    inv = [r[0] for r in conn.execute("SELECT item FROM inventory WHERE email=?", (sess["email"],))]
+    equipped = {r[0]: r[1] for r in conn.execute("SELECT slot, item FROM equipped WHERE email=?", (sess["email"],))}
+    ms = {r[0]: (r[1], r[2]) for r in conn.execute("SELECT key, progress, claimed FROM missions WHERE email=? AND day=?", (sess["email"], today))}
+    power = get_power(conn, sess["email"])
+    conn.close()
+    return {
+        "display": f"{sess['email'].split('@')[0]} {sess['name']}",
+        "points": u["points"],
+        "power": power,
+        "equipped": equipped,
+        "inventory": inv,
+        "missions": [
+            {"key": k, "desc": m["desc"], "goal": m["goal"], "bonus": m["bonus"],
+             "progress": ms.get(k, (0, 0))[0], "claimed": ms.get(k, (0, 0))[1]}
+            for k, m in MISSIONS.items()
+        ],
+        "login_bonus": bonus,
+        "items": ITEMS,
+    }
+
+
+class BuyIn(BaseModel):
+    token: str
+    item: str
+
+
+@app.post("/api/buy")
+def post_buy(b: BuyIn):
+    conn = get_db()
+    sess = verify_token(conn, b.token)
+    if not sess:
+        conn.close()
+        raise HTTPException(401, "Googleログインしてください")
+    item = ITEMS.get(b.item)
+    if not item:
+        conn.close()
+        raise HTTPException(400, "アイテムがありません")
+    u = get_user(conn, sess["email"], sess["name"])
+    owned = conn.execute("SELECT 1 FROM inventory WHERE email=? AND item=?", (sess["email"], b.item)).fetchone()
+    if owned:
+        conn.close()
+        raise HTTPException(400, "もう持ってます")
+    if u["points"] < item["price"]:
+        conn.close()
+        raise HTTPException(400, f"ポイントが足りません（{item['price']}pt必要）")
+    conn.execute("UPDATE users SET points=points-? WHERE email=?", (item["price"], sess["email"]))
+    conn.execute("INSERT INTO inventory (email, item) VALUES (?, ?)", (sess["email"], b.item))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "points": u["points"] - item["price"]}
+
+
+class EquipIn(BaseModel):
+    token: str
+    slot: str
+    item: str = ""
+
+
+@app.post("/api/equip")
+def post_equip(e: EquipIn):
+    conn = get_db()
+    sess = verify_token(conn, e.token)
+    if not sess:
+        conn.close()
+        raise HTTPException(401, "Googleログインしてください")
+    if e.slot not in ("weapon", "armor", "acc"):
+        conn.close()
+        raise HTTPException(400, "bad slot")
+    if e.item:
+        it = ITEMS.get(e.item)
+        if not it or it["slot"] != e.slot:
+            conn.close()
+            raise HTTPException(400, "bad item")
+        owned = conn.execute("SELECT 1 FROM inventory WHERE email=? AND item=?", (sess["email"], e.item)).fetchone()
+        if not owned:
+            conn.close()
+            raise HTTPException(400, "持っていません")
+        conn.execute(
+            "INSERT INTO equipped (email, slot, item) VALUES (?, ?, ?) ON CONFLICT(email, slot) DO UPDATE SET item=excluded.item",
+            (sess["email"], e.slot, e.item),
+        )
+    else:
+        conn.execute("DELETE FROM equipped WHERE email=? AND slot=?", (sess["email"], e.slot))
+    conn.commit()
+    power = get_power(conn, sess["email"])
+    conn.close()
+    return {"ok": True, "power": power}
+
+
+@app.get("/api/ranking")
+def get_ranking(token: str = ""):
+    conn = get_db()
+    sess = verify_token(conn, token)
+    if not sess:
+        conn.close()
+        raise HTTPException(401, "Googleログインしてください")
+    users = conn.execute("SELECT email, name, points FROM users").fetchall()
+    eqs = conn.execute("SELECT email, item FROM equipped").fetchall()
+    conn.close()
+    power_map = {e: 100 for e, _, _ in users}
+    for e, it in eqs:
+        if it in ITEMS and e in power_map:
+            power_map[e] += ITEMS[it]["power"]
+    lst = sorted(
+        ({"id": e.split("@")[0], "name": n, "power": power_map[e], "points": p} for e, n, p in users),
+        key=lambda x: (-x["power"], -x["points"]),
+    )[:30]
+    return {"ranking": lst, "me": sess["email"].split("@")[0]}
 
 
 class PasswordIn(BaseModel):
@@ -167,12 +396,23 @@ def get_stats(pw: str = ""):
     if not pw_matches(conn, pw):
         conn.close()
         raise HTTPException(403, "forbidden")
+    pt_map = {}
+    pw_map = {}
+    for e, p in conn.execute("SELECT email, points FROM users"):
+        pt_map[e.split("@")[0]] = p
+        pw_map[e.split("@")[0]] = 100
+    for e, it in conn.execute("SELECT email, item FROM equipped"):
+        k = e.split("@")[0]
+        if it in ITEMS and k in pw_map:
+            pw_map[k] += ITEMS[it]["power"]
     students = [
         {
             "student": r[0],
             "answered": r[1],
             "correct": r[2],
             "rate": round(r[2] / r[1] * 100, 1) if r[1] else 0,
+            "points": pt_map.get(str(r[0]).split(" ")[0], 0),
+            "power": pw_map.get(str(r[0]).split(" ")[0], 100),
             "last_ts": r[3],
         }
         for r in conn.execute(

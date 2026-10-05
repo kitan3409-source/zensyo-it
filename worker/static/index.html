@@ -60,6 +60,27 @@
   #signedIn b { color: var(--accent); }
   #logoutLink { color: var(--muted); font-size: 0.75rem; margin-left: 8px; }
   #loginHint { color: var(--wrong); font-size: 0.8rem; display: none; margin-top: 4px; }
+  .gameArea { display: none; }
+  .gameArea h2 { font-size: 1rem; margin-bottom: 10px; display: flex; gap: 14px; align-items: baseline; }
+  .gameArea h2 .sub { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
+  .gameArea h2 .big { color: var(--accent); font-size: 1.15rem; }
+  .eq { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+  .eq b { color: var(--text); }
+  .mission { margin-bottom: 10px; font-size: 0.85rem; }
+  .mission .mbar { height: 6px; background: var(--card2); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+  .mission .mbar > div { height: 100%; background: var(--correct); }
+  .mission .mdone { color: var(--correct); font-size: 0.75rem; }
+  .shopItem { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem; gap: 8px; }
+  .shopItem .meta { flex: 1; min-width: 0; }
+  .shopItem .meta small { color: var(--muted); display: block; }
+  .shopItem .buy { background: var(--accent); color: #082f49; border: none; border-radius: 6px; padding: 5px 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .shopItem .buy.owned { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+  .shopItem .buy.equipped { background: var(--correct); color: #052e16; }
+  .rankRow { display: flex; justify-content: space-between; padding: 6px 4px; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+  .rankRow.me { background: rgba(56, 189, 248, 0.08); }
+  .rankRow .pw { color: var(--accent); font-weight: 700; }
+  #gameNotice { color: var(--correct); font-size: 0.8rem; margin-bottom: 8px; }
+  .slotName { color: var(--muted); font-size: 0.75rem; margin: 10px 0 6px; }
   input[type=text]:focus, select:focus { outline: none; border-color: var(--accent); }
   .btn {
     background: var(--accent);
@@ -187,6 +208,27 @@
   </div>
   <div class="hint" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
 
+  <div class="card gameArea" id="charCard">
+    <h2>キャラ <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span></h2>
+    <div id="gameNotice"></div>
+    <div class="eq" id="equipList"></div>
+  </div>
+
+  <div class="card gameArea" id="missionCard">
+    <h2>今日のミッション</h2>
+    <div id="missionList"></div>
+  </div>
+
+  <div class="card gameArea" id="shopCard">
+    <h2>ショップ</h2>
+    <div id="shopList"></div>
+  </div>
+
+  <div class="card gameArea" id="rankCard">
+    <h2>ランキング（つよさ順）</h2>
+    <div id="rankList"></div>
+  </div>
+
   <div class="card" id="scoreCard" style="display:none">
     <div class="score">
       <div>お疲れさまでした！</div>
@@ -243,7 +285,64 @@ function showSignedIn() {
     $('signedIn').style.display = 'block';
     $('gbtn').style.display = 'none';
     $('loginHint').style.display = 'none';
+    for (const el of document.querySelectorAll('.gameArea')) el.style.display = 'block';
+    loadGame();
   }
+}
+
+const SLOT_LABEL = { weapon: '武器', armor: '服', acc: 'アクセサリ' };
+let me = null;
+
+async function loadGame() {
+  const r = await fetch('/api/me?token=' + encodeURIComponent(token));
+  if (!r.ok) return;
+  me = await r.json();
+  $('powerVal').textContent = me.power;
+  $('pointVal').textContent = me.points;
+  $('gameNotice').textContent = me.login_bonus ? `ログインボーナス +${me.login_bonus}pt!` : '';
+  const eq = ['weapon', 'armor', 'acc'].map(s => {
+    const id = me.equipped[s];
+    return `<div>${SLOT_LABEL[s]}: <b>${id ? me.items[id].name + ' +' + me.items[id].power : 'なし'}</b></div>`;
+  }).join('');
+  $('equipList').innerHTML = eq;
+  $('missionList').innerHTML = me.missions.map(m => `
+    <div class="mission">
+      <div>${m.desc}（${m.progress}/${m.goal}） <span class="sub">+${m.bonus}pt</span> ${m.claimed ? '<span class="mdone">達成済み</span>' : ''}</div>
+      <div class="mbar"><div style="width:${Math.min(100, m.progress / m.goal * 100)}%"></div></div>
+    </div>`).join('');
+  const groups = [['weapon', '武器'], ['armor', '服'], ['acc', 'アクセサリ']];
+  $('shopList').innerHTML = groups.map(([slot, label]) =>
+    `<div class="slotName">${label}</div>` +
+    Object.entries(me.items).filter(([, it]) => it.slot === slot).map(([id, it]) => {
+      const owned = me.inventory.includes(id);
+      const equipped = me.equipped[slot] === id;
+      const label2 = equipped ? '装備中（外す）' : owned ? '装備する' : `${it.price}pt`;
+      const cls = equipped ? 'buy equipped' : owned ? 'buy owned' : 'buy';
+      return `<div class="shopItem"><div class="meta">${it.name}<small>つよさ+${it.power}</small></div>
+        <button class="${cls}" onclick="shop('${id}')">${label2}</button></div>`;
+    }).join('')
+  ).join('');
+  const rr = await fetch('/api/ranking?token=' + encodeURIComponent(token));
+  if (rr.ok) {
+    const d = await rr.json();
+    $('rankList').innerHTML = d.ranking.length
+      ? d.ranking.map((r, i) => `<div class="rankRow${r.id === d.me ? ' me' : ''}"><span>${i + 1}位 ${r.name}（${r.id}）</span><span class="pw">つよさ ${r.power}</span></div>`).join('')
+      : '<div class="rankRow">まだ誰もいません</div>';
+  }
+}
+
+async function shop(id) {
+  const it = me.items[id];
+  const owned = me.inventory.includes(id);
+  const equipped = me.equipped[it.slot] === id;
+  const url = owned ? '/api/equip' : '/api/buy';
+  const body = owned
+    ? { token, slot: it.slot, item: equipped ? '' : id }
+    : { token, item: id };
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $('gameNotice').textContent = d.error || 'エラー'; return; }
+  loadGame();
 }
 
 $('logoutLink').onclick = (e) => {
@@ -358,7 +457,7 @@ async function answer(i) {
   updateStats();
 
   try {
-    await fetch('/api/answer', {
+    const ar = await fetch('/api/answer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -368,6 +467,14 @@ async function answer(i) {
         correct: correct
       })
     });
+    const ad = ar.ok ? await ar.json() : null;
+    if (ad) {
+      if (me) { me.points = ad.points; $('pointVal').textContent = ad.points; }
+      if (ad.missions_done && ad.missions_done.length) {
+        fb.innerHTML += ' <b>ミッション達成:</b> ' + ad.missions_done.map(m => esc(m.desc) + ' +' + m.bonus + 'pt').join('、');
+      }
+      loadGame();
+    }
   } catch (e) { /* 記録失敗しても進める */ }
 }
 
