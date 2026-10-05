@@ -5,25 +5,28 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return json({ error: "bad request" }, 400);
   }
-  const sess = await verifySession(env, b.token);
-  if (!sess) return json({ error: "Googleログインしてください" }, 401);
-  const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
-  await env.DB.prepare(
-    "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
-  )
-    .bind(
-      student,
-      String(b.term || "").slice(0, 200),
-      String(b.direction || "").slice(0, 10),
-      b.correct ? 1 : 0,
-      Date.now() / 1000
-    )
-    .run();
-  return json({ ok: true });
+  const r = await fetch(
+    "https://oauth2.googleapis.com/tokeninfo?id_token=" +
+      encodeURIComponent(b.credential || "")
+  );
+  if (!r.ok) return json({ error: "Googleログインに失敗しました" }, 401);
+  const t = await r.json();
+  if (t.aud !== env.GOOGLE_CLIENT_ID) return json({ error: "client_id が一致しません" }, 401);
+  if (t.hd !== "gse.okayama-c.ed.jp") {
+    return json({ error: "学校のアカウント（@gse.okayama-c.ed.jp）でログインしてください" }, 403);
+  }
+  const email = t.email;
+  const name = t.name || "";
+  const secret = await getSecret(env);
+  const exp = Date.now() + 7 * 24 * 3600 * 1000;
+  const payload = `${email}|${name}|${exp}`;
+  const sig = await hmacSha256(secret, payload);
+  const token = b64e(payload) + "." + sig;
+  return json({ token, display: `${email.split("@")[0]} ${name}` });
 }
 
-function b64d(s) {
-  return decodeURIComponent(escape(atob(s)));
+function b64e(s) {
+  return btoa(unescape(encodeURIComponent(s)));
 }
 
 async function hmacSha256(secret, msg) {
@@ -51,22 +54,6 @@ async function getSecret(env) {
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
   ).bind(s).run();
   return s;
-}
-
-async function verifySession(env, token) {
-  if (!token || !token.includes(".")) return null;
-  const [b64, sig] = token.split(".");
-  let payload;
-  try {
-    payload = b64d(b64);
-  } catch {
-    return null;
-  }
-  const secret = await getSecret(env);
-  if ((await hmacSha256(secret, payload)) !== sig) return null;
-  const [email, name, exp] = payload.split("|");
-  if (Number(exp) < Date.now()) return null;
-  return { email, name };
 }
 
 function json(obj, status = 200) {

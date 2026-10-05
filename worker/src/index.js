@@ -2,6 +2,37 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/config") {
+      return json({ client_id: env.GOOGLE_CLIENT_ID || "" });
+    }
+
+    if (url.pathname === "/api/login" && request.method === "POST") {
+      let b;
+      try {
+        b = await request.json();
+      } catch {
+        return json({ error: "bad request" }, 400);
+      }
+      const r = await fetch(
+        "https://oauth2.googleapis.com/tokeninfo?id_token=" +
+          encodeURIComponent(b.credential || "")
+      );
+      if (!r.ok) return json({ error: "Googleログインに失敗しました" }, 401);
+      const t = await r.json();
+      if (t.aud !== env.GOOGLE_CLIENT_ID) return json({ error: "client_id が一致しません" }, 401);
+      if (t.hd !== "gse.okayama-c.ed.jp") {
+        return json({ error: "学校のアカウント（@gse.okayama-c.ed.jp）でログインしてください" }, 403);
+      }
+      const email = t.email;
+      const name = t.name || "";
+      const secret = await getSecret(env);
+      const exp = Date.now() + 7 * 24 * 3600 * 1000;
+      const payload = `${email}|${name}|${exp}`;
+      const sig = await hmacSha256(secret, payload);
+      const token = b64e(payload) + "." + sig;
+      return json({ token, display: `${email.split("@")[0]} ${name}` });
+    }
+
     if (url.pathname === "/api/answer" && request.method === "POST") {
       let b;
       try {
@@ -9,8 +40,9 @@ export default {
       } catch {
         return json({ error: "bad request" }, 400);
       }
-      const student = String(b.student || "").trim().slice(0, 50);
-      if (!student) return json({ error: "student is required" }, 400);
+      const sess = await verifySession(env, b.token);
+      if (!sess) return json({ error: "Googleログインしてください" }, 401);
+      const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
       if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
       try {
         await env.DB.prepare(
@@ -91,6 +123,57 @@ export default {
     return env.ASSETS.fetch(new Request(assetUrl, request));
   },
 };
+
+function b64e(s) {
+  return btoa(unescape(encodeURIComponent(s)));
+}
+
+function b64d(s) {
+  return decodeURIComponent(escape(atob(s)));
+}
+
+async function hmacSha256(secret, msg) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const buf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function getSecret(env) {
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+  ).run();
+  const r = await env.DB.prepare("SELECT value FROM settings WHERE key='session_secret'").first();
+  if (r && r.value) return r.value;
+  const s = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
+  ).bind(s).run();
+  return s;
+}
+
+async function verifySession(env, token) {
+  if (!token || !token.includes(".")) return null;
+  const [b64, sig] = token.split(".");
+  let payload;
+  try {
+    payload = b64d(b64);
+  } catch {
+    return null;
+  }
+  const secret = await getSecret(env);
+  if ((await hmacSha256(secret, payload)) !== sig) return null;
+  const [email, name, exp] = payload.split("|");
+  if (Number(exp) < Date.now()) return null;
+  return { email, name };
+}
 
 async function hashPw(s) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));

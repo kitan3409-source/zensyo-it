@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>情報処理1級 4択クイズ</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #0f172a;
@@ -55,6 +56,10 @@
   .controls input[type=text] { flex: 1.2; }
   .controls select { flex: 1; }
   .controls input[type=text].need { border-color: var(--wrong); }
+  #signedIn { font-size: 0.85rem; align-self: center; }
+  #signedIn b { color: var(--accent); }
+  #logoutLink { color: var(--muted); font-size: 0.75rem; margin-left: 8px; }
+  #loginHint { color: var(--wrong); font-size: 0.8rem; display: none; margin-top: 4px; }
   input[type=text]:focus, select:focus { outline: none; border-color: var(--accent); }
   .btn {
     background: var(--accent);
@@ -149,9 +154,11 @@
   </header>
 
   <div class="controls">
-    <input type="text" id="clsInput" placeholder="クラス 例：3A" maxlength="20">
-    <input type="text" id="numInput" placeholder="番号" maxlength="10" inputmode="numeric">
-    <input type="text" id="nameInput" placeholder="名前" maxlength="50">
+    <div id="signinArea" style="flex:1">
+      <div id="gbtn"></div>
+      <div id="signedIn" style="display:none">ログイン中: <b id="who"></b><a href="#" id="logoutLink">切替</a></div>
+      <div id="loginHint">← 学校のGoogleアカウントでログインしてね</div>
+    </div>
   </div>
   <div class="controls">
     <select id="scopeSel" title="出題範囲"></select>
@@ -195,6 +202,57 @@ let TERMS = [];
 let session = null;
 let answered = false;
 const $ = (id) => document.getElementById(id);
+
+let token = localStorage.getItem('quiz-token') || '';
+
+fetch('/api/config').then(r => r.json()).then(c => {
+  if (!c.client_id) { $('loginHint').textContent = 'ログイン未設定（client_idがありません）'; $('loginHint').style.display = 'block'; return; }
+  const tryInit = (n) => {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({ client_id: c.client_id, callback: onGoogle });
+      google.accounts.id.renderButton($('gbtn'), { theme: 'filled_black', size: 'medium', text: 'signin_with', locale: 'ja' });
+      showSignedIn();
+    } else if (n < 100) {
+      setTimeout(() => tryInit(n + 1), 100);
+    } else {
+      $('loginHint').textContent = 'Googleログインを読み込めません（再読み込みしてね）';
+      $('loginHint').style.display = 'block';
+    }
+  };
+  tryInit(0);
+});
+
+async function onGoogle(res) {
+  const r = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential: res.credential })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $('loginHint').textContent = d.error || 'ログインに失敗しました'; $('loginHint').style.display = 'block'; return; }
+  token = d.token;
+  localStorage.setItem('quiz-token', token);
+  localStorage.setItem('quiz-display', d.display);
+  showSignedIn();
+}
+
+function showSignedIn() {
+  const disp = localStorage.getItem('quiz-display') || '';
+  if (token && disp) {
+    $('who').textContent = disp;
+    $('signedIn').style.display = 'block';
+    $('gbtn').style.display = 'none';
+    $('loginHint').style.display = 'none';
+  }
+}
+
+$('logoutLink').onclick = (e) => {
+  e.preventDefault();
+  token = '';
+  localStorage.removeItem('quiz-token');
+  localStorage.removeItem('quiz-display');
+  location.reload();
+};
 
 fetch('/terms.json').then(r => r.json()).then(d => {
   TERMS = d.terms;
@@ -272,23 +330,13 @@ function showQuestion() {
   $('nextRow').classList.remove('show');
 }
 
-function studentId() {
-  const cls = $('clsInput').value.trim();
-  const num = $('numInput').value.trim();
-  const name = $('nameInput').value.trim();
-  return [cls, num, name].filter(Boolean).join(' ');
-}
-
 async function answer(i) {
   if (answered) return;
-  let missing = null;
-  for (const id of ['clsInput', 'numInput', 'nameInput']) {
-    if (!$(id).value.trim()) { $(id).classList.add('need'); missing = missing || $(id); }
-    else $(id).classList.remove('need');
+  if (!token) {
+    $('loginHint').style.display = 'block';
+    $('signinArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
   }
-  if (missing) { missing.focus(); return; }
-  const name = studentId();
-  ['cls', 'num', 'name'].forEach(k => localStorage.setItem('quiz-' + k, $(k + 'Input').value.trim()));
   answered = true;
   const { t, t2m, key, choices } = session.current;
   const correct = choices[i] === t[key];
@@ -314,7 +362,7 @@ async function answer(i) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        student: name,
+        token: token,
         term: t.term,
         direction: t2m ? 't2m' : 'm2t',
         correct: correct
@@ -351,7 +399,7 @@ $('againBtn').onclick = () => { $('hint').style.display = 'block'; startQuiz(); 
 $('scopeSel').onchange = startQuiz;
 $('countSel').onchange = startQuiz;
 document.addEventListener('keydown', (e) => {
-  if (['clsInput', 'numInput', 'nameInput'].includes(document.activeElement.id)) return;
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
   if ($('quizCard').style.display !== 'none' && !answered && ['1','2','3','4'].includes(e.key)) {
     const i = Number(e.key) - 1;
     if ($('choices').children[i]) answer(i);
@@ -360,10 +408,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-['cls', 'num', 'name'].forEach(k => {
-  const v = localStorage.getItem('quiz-' + k);
-  if (v) $(k + 'Input').value = v;
-});
+
 </script>
 </body>
 </html>

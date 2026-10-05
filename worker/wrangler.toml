@@ -6,6 +6,9 @@ compatibility_date = "2025-09-01"
 directory = "./static"
 binding = "ASSETS"
 
+[vars]
+GOOGLE_CLIENT_ID = ""
+
 [[d1_databases]]
 binding = "DB"
 database_name = "zensho-quiz-db"
