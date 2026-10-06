@@ -72,6 +72,17 @@ def get_db() -> sqlite3.Connection:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
+    for m in (
+        "UPDATE equipped SET slot='rhand' WHERE slot='weapon'",
+        "UPDATE equipped SET slot='body' WHERE slot='armor'",
+        "UPDATE equipped SET slot='lhand' WHERE slot='acc'",
+        "DELETE FROM equipped WHERE item IN ('x6','g12')",
+    ):
+        try:
+            conn.execute(m)
+        except sqlite3.OperationalError:
+            pass
+    conn.commit()
     return conn
 
 
@@ -108,78 +119,119 @@ def verify_token(conn: sqlite3.Connection, token: str):
     return {"email": parts[0], "name": parts[1]}
 
 
-ITEMS = {
-    "w0": {"name": "ボールペンランス", "slot": "weapon", "power": 5, "price": 20},
-    "w1": {"name": "エンピツソード", "slot": "weapon", "power": 10, "price": 50},
-    "w2": {"name": "計算機ブレード", "slot": "weapon", "power": 30, "price": 150},
-    "w3": {"name": "ルーターハンマー", "slot": "weapon", "power": 50, "price": 250},
-    "w4": {"name": "サーバーブレード", "slot": "weapon", "power": 80, "price": 400},
-    "w5": {"name": "フレームワークス", "slot": "weapon", "power": 120, "price": 600},
-    "w6": {"name": "暗号キーアックス", "slot": "weapon", "power": 150, "price": 800},
-    "w7": {"name": "ゼロデイエッジ", "slot": "weapon", "power": 200, "price": 1200},
-    "w8": {"name": "量子ブレイド", "slot": "weapon", "power": 250, "price": 1500},
-    "w9": {"name": "伝説のフロッピー", "slot": "weapon", "power": 400, "price": 3000},
-    "a0": {"name": "ジャージ", "slot": "armor", "power": 5, "price": 25},
-    "a1": {"name": "学生服", "slot": "armor", "power": 10, "price": 50},
-    "a2": {"name": "ネクタイアーマー", "slot": "armor", "power": 15, "price": 80},
-    "a3": {"name": "ビジネススーツ", "slot": "armor", "power": 30, "price": 150},
-    "a4": {"name": "ファイアウォールメイル", "slot": "armor", "power": 50, "price": 250},
-    "a5": {"name": "デバッグアーマー", "slot": "armor", "power": 80, "price": 400},
-    "a6": {"name": "クラウドローブ", "slot": "armor", "power": 120, "price": 600},
-    "a7": {"name": "AIアーマー", "slot": "armor", "power": 150, "price": 800},
-    "a8": {"name": "エンタープライズ鎧", "slot": "armor", "power": 200, "price": 1200},
-    "a9": {"name": "神ゼロアーマー", "slot": "armor", "power": 400, "price": 3000},
-    "x0": {"name": "名札バッジ", "slot": "acc", "power": 5, "price": 20},
-    "x1": {"name": "鉛筆削りのお守り", "slot": "acc", "power": 10, "price": 40},
-    "x2": {"name": "USBメモリ", "slot": "acc", "power": 15, "price": 80},
-    "x3": {"name": "カードリーダー", "slot": "acc", "power": 25, "price": 120},
-    "x4": {"name": "電卓のお守り", "slot": "acc", "power": 40, "price": 200},
-    "x5": {"name": "外付けSSD", "slot": "acc", "power": 60, "price": 300},
-    "x6": {"name": "メガネ", "slot": "acc", "power": 80, "price": 350},
-    "x7": {"name": "光ファイバー", "slot": "acc", "power": 100, "price": 500},
-    "x8": {"name": "電子辞書", "slot": "acc", "power": 150, "price": 700},
-    "x9": {"name": "QRコードお守り", "slot": "acc", "power": 220, "price": 1200},
-}
+SLOTS = ["head", "body", "lhand", "rhand", "pants", "feet"]
 
 GACHA_ITEMS = [
-    {"id": "g1", "name": "ペーパーナイフ", "slot": "weapon", "power": 5, "rarity": "N"},
-    {"id": "g2", "name": "消しゴムダガー", "slot": "weapon", "power": 8, "rarity": "N"},
-    {"id": "gw3", "name": "ホチキスガン", "slot": "weapon", "power": 4, "rarity": "N"},
-    {"id": "gw4", "name": "定規ソード", "slot": "weapon", "power": 6, "rarity": "N"},
-    {"id": "g3", "name": "鉄のキーボード", "slot": "weapon", "power": 18, "rarity": "R"},
-    {"id": "g4", "name": "光るマウス", "slot": "weapon", "power": 25, "rarity": "R"},
-    {"id": "gw5", "name": "バーコードブレード", "slot": "weapon", "power": 16, "rarity": "R"},
-    {"id": "gw6", "name": "プリンターアックス", "slot": "weapon", "power": 28, "rarity": "R"},
-    {"id": "g5", "name": "ファイアウォールブレード", "slot": "weapon", "power": 60, "rarity": "SR"},
-    {"id": "gw7", "name": "バイナリハンマー", "slot": "weapon", "power": 50, "rarity": "SR"},
-    {"id": "g6", "name": "伝説のサーバー", "slot": "weapon", "power": 150, "rarity": "SSR"},
-    {"id": "gw8", "name": "聖剣エクセル", "slot": "weapon", "power": 170, "rarity": "SSR"},
-    {"id": "g7", "name": "パーカー", "slot": "armor", "power": 5, "rarity": "N"},
-    {"id": "g8", "name": "白衣", "slot": "armor", "power": 8, "rarity": "N"},
-    {"id": "ga3", "name": "体操服", "slot": "armor", "power": 4, "rarity": "N"},
-    {"id": "ga4", "name": "レインコート", "slot": "armor", "power": 6, "rarity": "N"},
-    {"id": "g9", "name": "セキュリティベスト", "slot": "armor", "power": 20, "rarity": "R"},
-    {"id": "ga5", "name": "セキュリティジャケット", "slot": "armor", "power": 32, "rarity": "R"},
-    {"id": "ga6", "name": "バックアップベスト", "slot": "armor", "power": 16, "rarity": "R"},
-    {"id": "g10", "name": "クラウドアーマー", "slot": "armor", "power": 60, "rarity": "SR"},
-    {"id": "ga7", "name": "補助記憶アーマー", "slot": "armor", "power": 50, "rarity": "SR"},
-    {"id": "g11", "name": "量子スーツ", "slot": "armor", "power": 150, "rarity": "SSR"},
-    {"id": "ga8", "name": "時空プロテクター", "slot": "armor", "power": 170, "rarity": "SSR"},
-    {"id": "g12", "name": "鉛筆キャップ", "slot": "acc", "power": 5, "rarity": "N"},
-    {"id": "gx3", "name": "付箋お守り", "slot": "acc", "power": 4, "rarity": "N"},
-    {"id": "gx4", "name": "消しゴムお守り", "slot": "acc", "power": 7, "rarity": "N"},
-    {"id": "g13", "name": "クリップ", "slot": "acc", "power": 12, "rarity": "R"},
-    {"id": "gx5", "name": "電池パック", "slot": "acc", "power": 14, "rarity": "R"},
-    {"id": "gx6", "name": "LANケーブル", "slot": "acc", "power": 30, "rarity": "R"},
-    {"id": "g14", "name": "SSD", "slot": "acc", "power": 35, "rarity": "SR"},
-    {"id": "g15", "name": "GPUお守り", "slot": "acc", "power": 55, "rarity": "SR"},
-    {"id": "g16", "name": "量子チップ", "slot": "acc", "power": 120, "rarity": "SSR"},
-    {"id": "gx7", "name": "シンギュラリティチップ", "slot": "acc", "power": 180, "rarity": "SSR"},
+    {"id": "w0", "name": "ボールペンランス", "slot": "rhand", "power": 5, "rarity": "N"},
+    {"id": "w1", "name": "エンピツソード", "slot": "rhand", "power": 10, "rarity": "N"},
+    {"id": "w2", "name": "計算機ブレード", "slot": "rhand", "power": 30, "rarity": "R"},
+    {"id": "w3", "name": "ルーターハンマー", "slot": "rhand", "power": 50, "rarity": "SR"},
+    {"id": "w4", "name": "サーバーブレード", "slot": "rhand", "power": 80, "rarity": "SR"},
+    {"id": "w5", "name": "フレームワークス", "slot": "rhand", "power": 120, "rarity": "SR"},
+    {"id": "w6", "name": "暗号キーアックス", "slot": "rhand", "power": 150, "rarity": "SSR"},
+    {"id": "w7", "name": "ゼロデイエッジ", "slot": "rhand", "power": 200, "rarity": "SSR"},
+    {"id": "w8", "name": "量子ブレイド", "slot": "rhand", "power": 250, "rarity": "SSR"},
+    {"id": "w9", "name": "伝説のフロッピー", "slot": "rhand", "power": 400, "rarity": "SSR"},
+    {"id": "a0", "name": "ジャージ", "slot": "body", "power": 5, "rarity": "N"},
+    {"id": "a1", "name": "学生服", "slot": "body", "power": 10, "rarity": "N"},
+    {"id": "a2", "name": "ネクタイアーマー", "slot": "body", "power": 15, "rarity": "N"},
+    {"id": "a3", "name": "ビジネススーツ", "slot": "body", "power": 30, "rarity": "R"},
+    {"id": "a4", "name": "ファイアウォールメイル", "slot": "body", "power": 50, "rarity": "SR"},
+    {"id": "a5", "name": "デバッグアーマー", "slot": "body", "power": 80, "rarity": "SR"},
+    {"id": "a6", "name": "クラウドローブ", "slot": "body", "power": 120, "rarity": "SR"},
+    {"id": "a7", "name": "AIアーマー", "slot": "body", "power": 150, "rarity": "SSR"},
+    {"id": "a8", "name": "エンタープライズ鎧", "slot": "body", "power": 200, "rarity": "SSR"},
+    {"id": "a9", "name": "神ゼロアーマー", "slot": "body", "power": 400, "rarity": "SSR"},
+    {"id": "x0", "name": "名札バッジ", "slot": "lhand", "power": 5, "rarity": "N"},
+    {"id": "x1", "name": "鉛筆削りのお守り", "slot": "lhand", "power": 10, "rarity": "N"},
+    {"id": "x2", "name": "USBメモリ", "slot": "lhand", "power": 15, "rarity": "N"},
+    {"id": "x3", "name": "カードリーダー", "slot": "lhand", "power": 25, "rarity": "R"},
+    {"id": "x4", "name": "電卓のお守り", "slot": "lhand", "power": 40, "rarity": "R"},
+    {"id": "x5", "name": "外付けSSD", "slot": "lhand", "power": 60, "rarity": "SR"},
+    {"id": "x6", "name": "メガネ", "slot": "head", "power": 80, "rarity": "SR"},
+    {"id": "x7", "name": "光ファイバー", "slot": "lhand", "power": 100, "rarity": "SR"},
+    {"id": "x8", "name": "電子辞書", "slot": "lhand", "power": 150, "rarity": "SSR"},
+    {"id": "x9", "name": "QRコードお守り", "slot": "lhand", "power": 220, "rarity": "SSR"},
+    {"id": "g1", "name": "ペーパーナイフ", "slot": "rhand", "power": 5, "rarity": "N"},
+    {"id": "g2", "name": "消しゴムダガー", "slot": "rhand", "power": 8, "rarity": "N"},
+    {"id": "gw3", "name": "ホチキスガン", "slot": "rhand", "power": 4, "rarity": "N"},
+    {"id": "gw4", "name": "定規ソード", "slot": "rhand", "power": 6, "rarity": "N"},
+    {"id": "g3", "name": "鉄のキーボード", "slot": "rhand", "power": 18, "rarity": "R"},
+    {"id": "g4", "name": "光るマウス", "slot": "rhand", "power": 25, "rarity": "R"},
+    {"id": "gw5", "name": "バーコードブレード", "slot": "rhand", "power": 16, "rarity": "R"},
+    {"id": "gw6", "name": "プリンターアックス", "slot": "rhand", "power": 28, "rarity": "R"},
+    {"id": "g5", "name": "ファイアウォールブレード", "slot": "rhand", "power": 60, "rarity": "SR"},
+    {"id": "gw7", "name": "バイナリハンマー", "slot": "rhand", "power": 50, "rarity": "SR"},
+    {"id": "g6", "name": "伝説のサーバー", "slot": "rhand", "power": 150, "rarity": "SSR"},
+    {"id": "gw8", "name": "聖剣エクセル", "slot": "rhand", "power": 170, "rarity": "SSR"},
+    {"id": "g7", "name": "パーカー", "slot": "body", "power": 5, "rarity": "N"},
+    {"id": "g8", "name": "白衣", "slot": "body", "power": 8, "rarity": "N"},
+    {"id": "ga3", "name": "体操服", "slot": "body", "power": 4, "rarity": "N"},
+    {"id": "ga4", "name": "レインコート", "slot": "body", "power": 6, "rarity": "N"},
+    {"id": "g9", "name": "セキュリティベスト", "slot": "body", "power": 20, "rarity": "R"},
+    {"id": "ga5", "name": "セキュリティジャケット", "slot": "body", "power": 32, "rarity": "R"},
+    {"id": "ga6", "name": "バックアップベスト", "slot": "body", "power": 16, "rarity": "R"},
+    {"id": "g10", "name": "クラウドアーマー", "slot": "body", "power": 60, "rarity": "SR"},
+    {"id": "ga7", "name": "補助記憶アーマー", "slot": "body", "power": 50, "rarity": "SR"},
+    {"id": "g11", "name": "量子スーツ", "slot": "body", "power": 150, "rarity": "SSR"},
+    {"id": "ga8", "name": "時空プロテクター", "slot": "body", "power": 170, "rarity": "SSR"},
+    {"id": "g12", "name": "鉛筆キャップ", "slot": "head", "power": 5, "rarity": "N"},
+    {"id": "gx3", "name": "付箋お守り", "slot": "lhand", "power": 4, "rarity": "N"},
+    {"id": "gx4", "name": "消しゴムお守り", "slot": "lhand", "power": 7, "rarity": "N"},
+    {"id": "g13", "name": "クリップ", "slot": "lhand", "power": 12, "rarity": "R"},
+    {"id": "gx5", "name": "電池パック", "slot": "lhand", "power": 14, "rarity": "R"},
+    {"id": "gx6", "name": "LANケーブル", "slot": "lhand", "power": 30, "rarity": "R"},
+    {"id": "g14", "name": "SSD", "slot": "lhand", "power": 35, "rarity": "SR"},
+    {"id": "g15", "name": "GPUお守り", "slot": "lhand", "power": 55, "rarity": "SR"},
+    {"id": "g16", "name": "量子チップ", "slot": "lhand", "power": 120, "rarity": "SSR"},
+    {"id": "gx7", "name": "シンギュラリティチップ", "slot": "lhand", "power": 180, "rarity": "SSR"},
+    {"id": "h1", "name": "学生帽", "slot": "head", "power": 8, "rarity": "N"},
+    {"id": "h2", "name": "ヘッドホン", "slot": "head", "power": 12, "rarity": "N"},
+    {"id": "h3", "name": "ノート魔法帽", "slot": "head", "power": 15, "rarity": "R"},
+    {"id": "h4", "name": "セキュリティヘルメット", "slot": "head", "power": 20, "rarity": "R"},
+    {"id": "h5", "name": "クラウドクラウン", "slot": "head", "power": 30, "rarity": "R"},
+    {"id": "h6", "name": "AIバイザー", "slot": "head", "power": 55, "rarity": "SR"},
+    {"id": "h7", "name": "量子ハイロ", "slot": "head", "power": 80, "rarity": "SR"},
+    {"id": "h8", "name": "伝説の王冠", "slot": "head", "power": 160, "rarity": "SSR"},
+    {"id": "p0", "name": "ジャージズボン", "slot": "pants", "power": 5, "rarity": "N"},
+    {"id": "p1", "name": "学生ズボン", "slot": "pants", "power": 8, "rarity": "N"},
+    {"id": "p2", "name": "スラックス", "slot": "pants", "power": 12, "rarity": "R"},
+    {"id": "p3", "name": "ジーンズ", "slot": "pants", "power": 18, "rarity": "R"},
+    {"id": "p4", "name": "ワークパンツ", "slot": "pants", "power": 25, "rarity": "R"},
+    {"id": "p5", "name": "ファイアパンツ", "slot": "pants", "power": 45, "rarity": "SR"},
+    {"id": "p6", "name": "クラウドパンツ", "slot": "pants", "power": 55, "rarity": "SR"},
+    {"id": "p7", "name": "AIレッグ", "slot": "pants", "power": 70, "rarity": "SR"},
+    {"id": "p8", "name": "エンタープライズ脚甲", "slot": "pants", "power": 120, "rarity": "SSR"},
+    {"id": "p9", "name": "神ゼロレギンス", "slot": "pants", "power": 180, "rarity": "SSR"},
+    {"id": "f0", "name": "上履き", "slot": "feet", "power": 4, "rarity": "N"},
+    {"id": "f1", "name": "スニーカー", "slot": "feet", "power": 8, "rarity": "N"},
+    {"id": "f2", "name": "革靴", "slot": "feet", "power": 12, "rarity": "R"},
+    {"id": "f3", "name": "セキュリティブーツ", "slot": "feet", "power": 20, "rarity": "R"},
+    {"id": "f4", "name": "光速スニーカー", "slot": "feet", "power": 30, "rarity": "R"},
+    {"id": "f5", "name": "ファイアブーツ", "slot": "feet", "power": 45, "rarity": "SR"},
+    {"id": "f6", "name": "クラウドブーツ", "slot": "feet", "power": 55, "rarity": "SR"},
+    {"id": "f7", "name": "ホバーシューズ", "slot": "feet", "power": 70, "rarity": "SR"},
+    {"id": "f8", "name": "量子ブーツ", "slot": "feet", "power": 110, "rarity": "SSR"},
+    {"id": "f9", "name": "伝説の羽根靴", "slot": "feet", "power": 160, "rarity": "SSR"},
+    {"id": "s0", "name": "下敷きシールド", "slot": "lhand", "power": 5, "rarity": "N"},
+    {"id": "s1", "name": "消しゴムシールド", "slot": "lhand", "power": 6, "rarity": "N"},
+    {"id": "s2", "name": "定規シールド", "slot": "lhand", "power": 8, "rarity": "N"},
+    {"id": "s3", "name": "キーボードシールド", "slot": "lhand", "power": 15, "rarity": "R"},
+    {"id": "s4", "name": "教科書シールド", "slot": "lhand", "power": 18, "rarity": "R"},
+    {"id": "s5", "name": "バックアップシールド", "slot": "lhand", "power": 25, "rarity": "R"},
+    {"id": "s6", "name": "ファイアウォールシールド", "slot": "lhand", "power": 50, "rarity": "SR"},
+    {"id": "s7", "name": "サーバーシールド", "slot": "lhand", "power": 60, "rarity": "SR"},
+    {"id": "s8", "name": "量子シールド", "slot": "lhand", "power": 90, "rarity": "SR"},
+    {"id": "s9", "name": "聖盾エクセル", "slot": "lhand", "power": 170, "rarity": "SSR"},
 ]
 
-ALL_ITEMS = dict(ITEMS)
-for _i in GACHA_ITEMS:
-    ALL_ITEMS[_i["id"]] = _i
+ALL_ITEMS = {i["id"]: i for i in GACHA_ITEMS}
+
+def level_of(correct):
+    return 1 + correct // 20
+
+def base_power(lv):
+    return 100 + 10 * (lv - 1)
 
 MISSIONS = {
     "ans10": {"desc": "10問回答する", "goal": 10, "bonus": 60},
@@ -206,6 +258,11 @@ ACH = {
     "login3": {"name": "三日坊主脱却", "desc": "3日連続ログイン", "bonus": 30},
     "login7": {"name": "習慣の天才", "desc": "7日連続ログイン", "bonus": 70},
     "shop5": {"name": "コレクター", "desc": "アイテムを5種所持", "bonus": 50},
+    "coll30": {"name": "コレクター改", "desc": "アイテムを30種所持", "bonus": 150},
+    "coll50": {"name": "アイテム博物館", "desc": "アイテムを50種所持", "bonus": 300},
+    "fulleq": {"name": "フル装備", "desc": "6スロットすべてに装備", "bonus": 100},
+    "lv5": {"name": "レベル5", "desc": "レベル5に到達", "bonus": 150},
+    "lv10": {"name": "レベル10", "desc": "レベル10に到達", "bonus": 400},
 }
 
 RANKS = [
@@ -254,8 +311,15 @@ def get_total(conn: sqlite3.Connection, email: str) -> int:
     return r[0] if r else 0
 
 
+def get_correct(conn: sqlite3.Connection, email: str) -> int:
+    r = conn.execute(
+        "SELECT SUM(correct) FROM answers WHERE student LIKE ?", (email.split("@")[0] + " %",)
+    ).fetchone()
+    return r[0] if r and r[0] else 0
+
+
 def get_power(conn: sqlite3.Connection, email: str) -> int:
-    p = 100
+    p = base_power(level_of(get_correct(conn, email)))
     for (it,) in conn.execute("SELECT item FROM equipped WHERE email=?", (email,)):
         if it in ALL_ITEMS:
             p += ALL_ITEMS[it]["power"]
@@ -493,6 +557,9 @@ def post_answer(a: AnswerIn):
             done.append(m)
     boss_res = damage_boss(conn, sess["email"], 1 + power // 80) if a.correct else None
     total = get_total(conn, sess["email"])
+    correct_total = get_correct(conn, sess["email"])
+    level = level_of(correct_total)
+    level_up = level if level > level_of(correct_total - (1 if a.correct else 0)) else None
     hour = time.gmtime(time.time() + 9 * 3600).tm_hour
     new_ach = []
     for k, cond in [
@@ -501,6 +568,7 @@ def post_answer(a: AnswerIn):
         ("streak10", streak >= 10), ("streak20", streak >= 20), ("streak30", streak >= 30),
         ("early", hour < 7), ("night", hour >= 23),
         ("rich", (u["lifetime"] or 0) + earned >= 1000),
+        ("lv5", level >= 5), ("lv10", level >= 10),
         ("boss", bool(boss_res and boss_res.get("killed"))),
     ]:
         g = grant_ach(conn, sess["email"], k, cond)
@@ -514,6 +582,7 @@ def post_answer(a: AnswerIn):
         "missions_done": done, "ach_new": new_ach,
         "total": total, "rank": rank_of(total),
         "rank_up": rank_of(total) if rank_of(total) != rank_of(total - 1) else None,
+        "level": level, "correct_total": correct_total, "level_up": level_up,
         "boss": boss_res,
     }
 
@@ -544,6 +613,8 @@ def get_me(token: str = ""):
     ms = {r[0]: (r[1], r[2]) for r in conn.execute("SELECT key, progress, claimed FROM missions WHERE email=? AND day=?", (sess["email"], today))}
     unlocked = [r[0] for r in conn.execute("SELECT key FROM achievements WHERE email=?", (sess["email"],))]
     total = get_total(conn, sess["email"])
+    correct = get_correct(conn, sess["email"])
+    level = level_of(correct)
     power = get_power(conn, sess["email"])
     regions = get_regions(conn, sess["email"])
     boss = get_boss(conn, sess["email"])
@@ -553,7 +624,11 @@ def get_me(token: str = ""):
         "display": f"{sess['email'].split('@')[0]} {sess['name']}",
         "points": u["points"],
         "power": power,
+        "base_power": base_power(level),
         "total": total,
+        "correct_total": correct,
+        "level": level,
+        "next_level_at": level * 20,
         "rank": rank_of(total),
         "next_at": next_rank_at(total),
         "streak": streak,
@@ -569,7 +644,7 @@ def get_me(token: str = ""):
         "regions": regions,
         "boss": boss,
         "login_bonus": bonus,
-        "items": ITEMS,
+        "items": ALL_ITEMS,
         "gacha": GACHA_ITEMS,
     }
 
@@ -581,30 +656,7 @@ class BuyIn(BaseModel):
 
 @app.post("/api/buy")
 def post_buy(b: BuyIn):
-    conn = get_db()
-    sess = verify_token(conn, b.token)
-    if not sess:
-        conn.close()
-        raise HTTPException(401, "ログインしてください")
-    item = ITEMS.get(b.item)
-    if not item:
-        conn.close()
-        raise HTTPException(400, "アイテムがありません")
-    u = get_user(conn, sess["email"], sess["name"])
-    owned = conn.execute("SELECT 1 FROM inventory WHERE email=? AND item=?", (sess["email"], b.item)).fetchone()
-    if owned:
-        conn.close()
-        raise HTTPException(400, "もう持ってます")
-    if u["points"] < item["price"]:
-        conn.close()
-        raise HTTPException(400, f"ポイントが足りません（{item['price']}pt必要）")
-    conn.execute("UPDATE users SET points=points-? WHERE email=?", (item["price"], sess["email"]))
-    conn.execute("INSERT INTO inventory (email, item) VALUES (?, ?)", (sess["email"], b.item))
-    conn.commit()
-    cnt = conn.execute("SELECT COUNT(*) FROM inventory WHERE email=?", (sess["email"],)).fetchone()[0]
-    grant_ach(conn, sess["email"], "shop5", cnt >= 5)
-    conn.close()
-    return {"ok": True, "points": u["points"] - item["price"]}
+    raise HTTPException(400, "アイテムはガチャでのみ入手できます")
 
 
 class EquipIn(BaseModel):
@@ -620,7 +672,7 @@ def post_equip(e: EquipIn):
     if not sess:
         conn.close()
         raise HTTPException(401, "ログインしてください")
-    if e.slot not in ("weapon", "armor", "acc"):
+    if e.slot not in SLOTS:
         conn.close()
         raise HTTPException(400, "bad slot")
     if e.item:
@@ -639,6 +691,9 @@ def post_equip(e: EquipIn):
     else:
         conn.execute("DELETE FROM equipped WHERE email=? AND slot=?", (sess["email"], e.slot))
     conn.commit()
+    ec = conn.execute("SELECT COUNT(*) FROM equipped WHERE email=?", (sess["email"],)).fetchone()[0]
+    grant_ach(conn, sess["email"], "fulleq", ec >= len(SLOTS))
+    conn.commit()
     power = get_power(conn, sess["email"])
     conn.close()
     return {"ok": True, "power": power}
@@ -654,10 +709,12 @@ def get_ranking(token: str = ""):
     users = conn.execute("SELECT email, name, points, login_streak FROM users").fetchall()
     eqs = conn.execute("SELECT email, item FROM equipped").fetchall()
     tot_map = {}
+    cor_map = {}
     name_map = {}
-    for s, c in conn.execute("SELECT student, COUNT(*) FROM answers GROUP BY student"):
+    for s, c, sc in conn.execute("SELECT student, COUNT(*), SUM(correct) FROM answers GROUP BY student"):
         sid = str(s).split(" ")[0]
         tot_map[sid] = c
+        cor_map[sid] = sc or 0
         name_map[sid] = " ".join(str(s).split(" ")[1:])
     week_map = {}
     for s, c, sc in conn.execute(
@@ -666,7 +723,7 @@ def get_ranking(token: str = ""):
     ):
         week_map[str(s).split(" ")[0]] = (sc or 0) * 8 + c * 2
     conn.close()
-    power_map = {e: 100 for e, _, _, _ in users}
+    power_map = {e: base_power(level_of(cor_map.get(e.split("@")[0], 0))) for e, _, _, _ in users}
     for e, it in eqs:
         if it in ALL_ITEMS and e in power_map:
             power_map[e] += ALL_ITEMS[it]["power"]
@@ -718,6 +775,8 @@ def post_gacha(g: GachaIn):
         grant_ach(conn, sess["email"], "gacha10", (u["gacha_count"] or 0) + 1 >= 10),
         grant_ach(conn, sess["email"], "ssr", rarity == "SSR"),
         grant_ach(conn, sess["email"], "shop5", cnt >= 5),
+        grant_ach(conn, sess["email"], "coll30", cnt >= 30),
+        grant_ach(conn, sess["email"], "coll50", cnt >= 50),
     ] if x]
     conn.close()
     return {
@@ -827,10 +886,14 @@ def get_stats(pw: str = ""):
     pt_map = {}
     pw_map = {}
     streak_map = {}
+    cor_map = {}
+    for s_, c_ in conn.execute("SELECT student, SUM(correct) FROM answers GROUP BY student"):
+        cor_map[str(s_).split(" ")[0]] = c_ or 0
     for e, p, st in conn.execute("SELECT email, points, login_streak FROM users"):
-        pt_map[e.split("@")[0]] = p
-        pw_map[e.split("@")[0]] = 100
-        streak_map[e.split("@")[0]] = st
+        k = e.split("@")[0]
+        pt_map[k] = p
+        pw_map[k] = base_power(level_of(cor_map.get(k, 0)))
+        streak_map[k] = st
     for e, it in conn.execute("SELECT email, item FROM equipped"):
         k = e.split("@")[0]
         if it in ALL_ITEMS and k in pw_map:
@@ -843,6 +906,7 @@ def get_stats(pw: str = ""):
             "rate": round(r[2] / r[1] * 100, 1) if r[1] else 0,
             "points": pt_map.get(str(r[0]).split(" ")[0], 0),
             "power": pw_map.get(str(r[0]).split(" ")[0], 100),
+            "level": level_of(r[2] or 0),
             "rank": rank_of(r[1]),
             "streak": streak_map.get(str(r[0]).split(" ")[0], 0),
             "last_ts": r[3],

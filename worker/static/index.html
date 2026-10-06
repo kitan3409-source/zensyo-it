@@ -117,9 +117,12 @@
   .avatarWrap { position: relative; width: 200px; height: 200px; margin: 6px auto 10px; }
   .avatarWrap img { position: absolute; image-rendering: pixelated; }
   .avBase { inset: 0; width: 100%; height: 100%; object-fit: contain; }
-  .av_armor { left: 16%; top: 42%; width: 64%; height: 56%; object-fit: contain; }
-  .av_acc { left: 34%; top: 54%; width: 28%; height: 30%; object-fit: contain; }
-  .av_weapon { left: 46%; top: 16%; width: 50%; height: 76%; object-fit: contain; }
+  .av_feet { left: 28%; top: 82%; width: 44%; height: 18%; object-fit: contain; }
+  .av_pants { left: 22%; top: 60%; width: 52%; height: 32%; object-fit: contain; }
+  .av_body { left: 16%; top: 38%; width: 64%; height: 56%; object-fit: contain; }
+  .av_head { left: 30%; top: -3%; width: 40%; height: 32%; object-fit: contain; }
+  .av_lhand { left: 4%; top: 16%; width: 50%; height: 76%; object-fit: contain; transform: scaleX(-1); }
+  .av_rhand { left: 46%; top: 16%; width: 50%; height: 76%; object-fit: contain; }
   .itico { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; vertical-align: middle; }
   .gachaBtn { width: 100%; padding: 14px; font-size: 1rem; }
   #gachaResult { margin-top: 10px; font-size: 0.9rem; min-height: 1.2em; }
@@ -261,6 +264,16 @@
       </div>
       <div id="signedIn" style="display:none">ログイン中: <b id="who"></b><a href="#" id="logoutLink">切替</a></div>
       <div id="loginHint">← 初回はPINを決めて登録、2回目以降はそのPINでログイン</div>
+      <div style="margin-top:10px">
+        <button class="btn" id="tsToggle" style="font-size:12px;padding:7px 14px">別の問題セットを使う（他教科対応）</button>
+        <div id="tsPanel" style="display:none;margin-top:10px;text-align:left">
+          <input id="tsUrl" class="field" placeholder="問題JSONのURL（https://…）" style="width:100%;margin-bottom:8px">
+          <textarea id="tsJson" class="field" rows="4" style="width:100%;resize:vertical" placeholder='またはJSONを直接貼り付け: {"terms":[{"term":"用語","meaning":"意味","department":"教科","category":"分野"}]} / [{"term":..,"meaning":..}]形式も可'></textarea>
+          <button class="btn" id="tsApply" style="padding:8px 16px">この問題セットで開始</button>
+          <button class="btn" id="tsReset" style="padding:8px 16px;display:none">公式問題に戻す</button>
+          <div id="tsMsg" class="sub" style="margin-top:8px"></div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="gameArea">
@@ -293,10 +306,10 @@
   <div class="hint gameArea" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
 
   <div class="card gameArea" id="charCard">
-    <h2>キャラ <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span> <span class="sub">連続ログイン <b id="streakVal">0</b>日</span></h2>
+    <h2>キャラ <span class="sub">Lv <b class="big" id="levelVal">1</b></span> <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span> <span class="sub">連続ログイン <b id="streakVal">0</b>日</span></h2>
     <div class="rankBadge"><span class="letter" id="rankVal">E</span><span class="title" id="rankTitle">ただの生徒</span></div>
     <div class="avatarWrap" id="avatarWrap"><img class="avBase" src="/sprites/bird.png" alt="キャラ"></div>
-    <div class="mission"><div class="mbar"><div id="rankBar"></div></div><div class="rankNext" id="rankNext"></div></div>
+    <div class="mission"><div class="mbar"><div id="rankBar"></div></div><div class="rankNext" id="rankNext"></div><div class="rankNext" id="levelNext" style="margin-top:2px"></div></div>
     <div id="gameNotice"></div>
     <div class="eq" id="equipList"></div>
   </div>
@@ -325,12 +338,13 @@
   </div>
 
   <div class="card gameArea" id="achCard">
-    <h2>実績 <span class="sub" id="achCount"></span></h2>
+    <h2>バッジ・リワード <span class="sub" id="achCount"></span></h2>
     <div class="achGrid" id="achList"></div>
   </div>
 
   <div class="card gameArea" id="shopCard">
-    <h2>ショップ</h2>
+    <h2>コレクション <span class="sub" id="collCount"></span></h2>
+    <div class="sub" style="margin-bottom:8px">アイテムはすべてガチャで入手 — 押して装備</div>
     <div id="shopList"></div>
   </div>
 
@@ -410,7 +424,8 @@ function showSignedIn() {
   }
 }
 
-const SLOT_LABEL = { weapon: '武器', armor: '服', acc: 'アクセサリ' };
+const SLOT_LABEL = { head: '頭', body: '体', lhand: '左手', rhand: '右手', pants: 'ズボン', feet: '足' };
+const SLOT_KEYS = ['head', 'body', 'lhand', 'rhand', 'pants', 'feet'];
 const RANK_TITLE = { SS: '情報の神', S: '電脳賢者', A: '検定の覇者', B: '用語マスター', C: '問題ハンター', D: '勉強家見習い', E: 'ただの生徒' };
 let me = null;
 let rankData = null;
@@ -433,9 +448,11 @@ async function loadGame() {
   if (!r.ok) return;
   me = await r.json();
   const items = allItems();
+  $('levelVal').textContent = me.level;
   $('powerVal').textContent = me.power;
   $('pointVal').textContent = me.points;
   $('streakVal').textContent = me.streak;
+  $('levelNext').textContent = `レベル${me.level}（正解${me.correct_total}問）— 次のLvまであと ${me.next_level_at - me.correct_total} 問正解（基礎攻撃力 ${me.base_power}）`;
   $('rankVal').textContent = me.rank;
   $('rankTitle').textContent = RANK_TITLE[me.rank] || '';
   $('rankNext').textContent = me.next_at
@@ -445,10 +462,10 @@ async function loadGame() {
   $('rankBar').style.width = me.next_at ? Math.min(100, (me.total - prev) / (me.next_at - prev) * 100) + '%' : '100%';
   $('gameNotice').textContent = me.login_bonus ? `ログインボーナス +${me.login_bonus}pt!` : '';
   $('avatarWrap').innerHTML = '<img class="avBase" src="/sprites/bird.png" alt="キャラ">' +
-    ['armor', 'acc', 'weapon'].map(s =>
+    ['feet', 'pants', 'body', 'head', 'lhand', 'rhand'].map(s =>
       me.equipped[s] ? `<img class="avLay av_${s}" src="/sprites/${me.equipped[s]}.png" alt="">` : ''
     ).join('');
-  $('equipList').innerHTML = ['weapon', 'armor', 'acc'].map(s => {
+  $('equipList').innerHTML = SLOT_KEYS.map(s => {
     const id = me.equipped[s];
     const it = id ? items[id] : null;
     return `<div>${SLOT_LABEL[s]}: <b>${it ? it.name + ' +' + it.power : 'なし'}</b></div>`;
@@ -476,28 +493,19 @@ async function loadGame() {
   $('achList').innerHTML = Object.entries(me.achievements).map(([k, a]) =>
     `<div class="ach${unl.has(k) ? ' on' : ''}"><div class="an">${unl.has(k) ? a.name : '？？？'}</div><div class="ad">${a.desc} +${a.bonus}pt</div></div>`).join('');
 
-  const groups = [['weapon', '武器'], ['armor', '服'], ['acc', 'アクセサリ']];
-  $('shopList').innerHTML = groups.map(([slot, label]) =>
-    `<div class="slotName">${label}</div>` +
-    Object.entries(me.items).filter(([, it]) => it.slot === slot).map(([id, it]) => {
-      const owned = me.inventory.includes(id);
-      const equipped = me.equipped[slot] === id;
-      const label2 = equipped ? '装備中（外す）' : owned ? '装備する' : `${it.price}pt`;
-      const cls = equipped ? 'buy equipped' : owned ? 'buy owned' : 'buy';
-      return `<div class="shopItem"><div class="meta"><img class="itico" src="/sprites/${id}.png" alt=""> ${it.name}<small>つよさ+${it.power}</small></div>
-        <button class="${cls}" onclick="shop('${id}')">${label2}</button></div>`;
-    }).join('')
-  ).join('');
-
-  const gachaOwned = me.gacha.filter(i => me.inventory.includes(i.id));
-  if (gachaOwned.length) {
-    $('shopList').innerHTML += '<div class="slotName">ガチャ産アイテム（装備）</div>' +
-      gachaOwned.map(i => {
-        const equipped = me.equipped[i.slot] === i.id;
-        return `<div class="shopItem"><div class="meta"><img class="itico" src="/sprites/${i.id}.png" alt=""> ${i.name} <span class="rar rar-${i.rarity}">${i.rarity}</span><small>${SLOT_LABEL[i.slot]} つよさ+${i.power}</small></div>
-          <button class="buy ${equipped ? 'equipped' : 'owned'}" onclick="equipIt('${i.id}')">${equipped ? '装備中（外す）' : '装備する'}</button></div>`;
+  const ownedSet = new Set(me.inventory);
+  const totalItems = Object.keys(me.items).length;
+  $('collCount').textContent = `${ownedSet.size}/${totalItems}種 所持`;
+  $('shopList').innerHTML = SLOT_KEYS.map(slot => {
+    const owned = Object.entries(me.items).filter(([id, it]) => it.slot === slot && ownedSet.has(id));
+    if (!owned.length) return '';
+    return `<div class="slotName">${SLOT_LABEL[slot]}</div>` +
+      owned.map(([id, it]) => {
+        const equipped = me.equipped[slot] === id;
+        return `<div class="shopItem"><div class="meta"><img class="itico" src="/sprites/${id}.png" alt=""> ${it.name} <span class="rar rar-${it.rarity}">${it.rarity}</span><small>つよさ+${it.power}</small></div>
+          <button class="buy ${equipped ? 'equipped' : 'owned'}" onclick="equipIt('${id}')">${equipped ? '装備中（外す）' : '装備する'}</button></div>`;
       }).join('');
-  }
+  }).join('') || '<div class="sub">まだアイテムがありません — ガチャをまわそう</div>';
 
   const rr = await fetch('/api/ranking?token=' + encodeURIComponent(token));
   if (rr.ok) { rankData = await rr.json(); renderRank(); }
@@ -538,19 +546,7 @@ async function equipIt(id) {
   loadGame();
 }
 
-async function shop(id) {
-  const it = me.items[id];
-  const owned = me.inventory.includes(id);
-  const equipped = me.equipped[it.slot] === id;
-  const url = owned ? '/api/equip' : '/api/buy';
-  const body = owned
-    ? { token, slot: it.slot, item: equipped ? '' : id }
-    : { token, item: id };
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) { $('gameNotice').textContent = d.error || 'エラー'; return; }
-  loadGame();
-}
+
 
 $('gachaBtn').onclick = async () => {
   $('gachaResult').innerHTML = 'まわしています…';
@@ -576,18 +572,76 @@ $('logoutLink').onclick = (e) => {
   location.reload();
 };
 
-fetch('/terms').then(r => r.json()).then(d => {
-  TERMS = d.terms;
+function normDeck(j) {
+  const arr = j && (j.terms || j.words || (Array.isArray(j) ? j : null));
+  if (!arr || !arr.length) return null;
+  const terms = [];
+  for (const t of arr) {
+    const term = String(t.term != null ? t.term : (t.q != null ? t.q : (Array.isArray(t) ? t[0] : ''))).trim();
+    const meaning = String(t.meaning != null ? t.meaning : (t.a != null ? t.a : (Array.isArray(t) ? t[1] : ''))).trim();
+    if (!term || !meaning) continue;
+    terms.push({ term, meaning, department: String(t.department || (j && j.exam) || 'カスタム'), category: String(t.category || '全般') });
+  }
+  return terms.length >= 4 ? { name: (j && (j.exam || j.name)) || 'カスタム問題セット', terms } : null;
+}
+
+function applyDeck(deck) {
+  TERMS = deck.terms;
   $('totalTerms').textContent = TERMS.length;
   const sel = $('scopeSel');
-  const cats = [...new Set(TERMS.map(t => t.category))];
   sel.innerHTML = '';
   sel.add(new Option('すべて', 'すべて'));
-  ['共通', 'ビジネス情報'].forEach(dep => sel.add(new Option(dep, dep)));
-  cats.forEach(c => sel.add(new Option(c, 'cat:' + c)));
+  [...new Set(TERMS.map(t => t.department))].forEach(dep => sel.add(new Option(dep, dep)));
+  [...new Set(TERMS.map(t => t.category))].forEach(c => sel.add(new Option(c, 'cat:' + c)));
+  $('tsReset').style.display = localStorage.getItem('custom-terms') ? 'inline-block' : 'none';
+}
+
+$('tsToggle').onclick = () => {
+  const p = $('tsPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+};
+$('tsApply').onclick = async () => {
+  const url = $('tsUrl').value.trim();
+  const msg = $('tsMsg');
+  try {
+    let j;
+    if (url) {
+      msg.textContent = '取得中…';
+      const r = await fetch(url);
+      j = await r.json();
+    } else {
+      j = JSON.parse($('tsJson').value);
+    }
+    const deck = normDeck(j);
+    if (!deck) { msg.textContent = '形式が違います（term/meaning を含む4項目以上が必要）'; return; }
+    localStorage.setItem('custom-terms', JSON.stringify(deck));
+    msg.textContent = `${deck.name}: ${deck.terms.length}問を読み込みました`;
+    applyDeck(deck);
+    startQuiz();
+  } catch (e) { msg.textContent = '読み込み失敗: ' + e.message; }
+};
+$('tsReset').onclick = () => { localStorage.removeItem('custom-terms'); location.reload(); };
+
+const customDeck = localStorage.getItem('custom-terms');
+if (customDeck) {
+  try {
+    const deck = normDeck(JSON.parse(customDeck));
+    if (deck) {
+      applyDeck(deck);
+      $('tsMsg').textContent = `カスタム問題セット「${deck.name}」を使用中`;
+    }
+  } catch {}
+}
+if (!TERMS.length) {
+  fetch('/terms').then(r => r.json()).then(d => {
+    applyDeck({ name: '全商 情報処理1級', terms: d.terms || d });
+    showSignedIn();
+    startQuiz();
+  });
+} else {
   showSignedIn();
   startQuiz();
-});
+}
 
 function shuffle(a) {
   a = a.slice();
@@ -700,6 +754,8 @@ async function answer(i) {
       if (ad.missions_done && ad.missions_done.length) notes.push('ミッション達成: ' + ad.missions_done.map(m => m.desc + ` +${m.bonus}pt`).join('、'));
       if (ad.ach_new && ad.ach_new.length) notes.push('実績解除: ' + ad.ach_new.map(a => a.name + ` +${a.bonus}pt`).join('、'));
       if (ad.rank_up) notes.push(`ランクアップ！ ${ad.rank_up}（${RANK_TITLE[ad.rank_up] || ''}）`);
+      if (ad.level_up) notes.push(`レベルアップ！ Lv${ad.level_up}（基礎攻撃力+10）`);
+      if (ad.level !== undefined && me) { me.level = ad.level; me.correct_total = ad.correct_total; $('levelVal').textContent = ad.level; }
       if (ad.boss) notes.push(ad.boss.killed ? `ボス「${ad.boss.name}」討伐！ +200pt` : `ボスに${ad.boss.dmg}ダメージ`);
       if (notes.length) fb.innerHTML += ' <b>' + notes.map(esc).join(' / ') + '</b>';
       loadGame();

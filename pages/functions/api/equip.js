@@ -1,4 +1,4 @@
-import { allItems, ensureGameTables, getPower, verifySession, json } from "../_game.js";
+import { SLOTS, allItems, ensureGameTables, getPower, grantAch, verifySession, json } from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -9,7 +9,7 @@ export async function onRequestPost({ request, env }) {
   }
   const sess = await verifySession(env, b.token);
   if (!sess) return json({ error: "ログインしてください" }, 401);
-  if (!["weapon", "armor", "acc"].includes(b.slot)) return json({ error: "bad slot" }, 400);
+  if (!SLOTS.includes(b.slot)) return json({ error: "bad slot" }, 400);
   await ensureGameTables(env);
   const all = allItems();
   if (b.item) {
@@ -25,5 +25,9 @@ export async function onRequestPost({ request, env }) {
   } else {
     await env.DB.prepare("DELETE FROM equipped WHERE email=? AND slot=?").bind(sess.email, b.slot).run();
   }
+  const ec = await env.DB.prepare(
+    "SELECT COUNT(*) AS c FROM equipped WHERE email=?"
+  ).bind(sess.email).first();
+  await grantAch(env, sess.email, "fulleq", (ec && ec.c) >= SLOTS.length);
   return json({ ok: true, power: await getPower(env, sess.email) });
 }

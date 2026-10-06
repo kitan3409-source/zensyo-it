@@ -1,4 +1,4 @@
-import { allItems, rankOf, ensureGameTables, verifySession, json } from "../_game.js";
+import { allItems, rankOf, levelOf, basePower, ensureGameTables, verifySession, json } from "../_game.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -8,14 +8,17 @@ export async function onRequestGet({ request, env }) {
   const users = await env.DB.prepare("SELECT email, name, points, login_streak FROM users").all();
   const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
   const all = allItems();
+  const totals = await env.DB.prepare(
+    "SELECT student, COUNT(*) AS c, SUM(correct) AS cor FROM answers GROUP BY student"
+  ).all();
+  const corMap = {};
+  for (const r of totals.results) corMap[String(r.student).split(" ")[0]] = r.cor || 0;
   const powerMap = {};
-  for (const u of users.results) powerMap[u.email] = 100;
+  for (const u of users.results)
+    powerMap[u.email] = basePower(levelOf(corMap[u.email.split("@")[0]] || 0));
   for (const r of eqs.results) {
     if (all[r.item] && powerMap[r.email] !== undefined) powerMap[r.email] += all[r.item].power;
   }
-  const totals = await env.DB.prepare(
-    "SELECT student, COUNT(*) AS c FROM answers GROUP BY student"
-  ).all();
   const week = await env.DB.prepare(
     "SELECT student, COUNT(*) AS c, SUM(correct) AS s FROM answers WHERE ts >= ? GROUP BY student"
   ).bind(Date.now() / 1000 - 7 * 86400).all();

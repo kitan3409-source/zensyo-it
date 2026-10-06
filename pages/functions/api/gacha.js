@@ -29,7 +29,8 @@ export async function onRequestPost({ request, env }) {
     "UPDATE users SET points=points-?+?, gacha_count=gacha_count+1 WHERE email=?"
   ).bind(COST, refund, sess.email).run();
   const newAch = [];
-  for (const [k, c] of [["gacha10", (u.gacha_count || 0) + 1 >= 10], ["ssr", rarity === "SSR"], ["shop5", await countInv(env, sess.email) >= 5]]) {
+  const invCnt = await countInv(env, sess.email);
+  for (const [k, c] of [["gacha10", (u.gacha_count || 0) + 1 >= 10], ["ssr", rarity === "SSR"], ["shop5", invCnt >= 5], ["coll30", invCnt >= 30], ["coll50", invCnt >= 50]]) {
     const g = await grantAch(env, sess.email, k, c);
     if (g) newAch.push(g);
   }

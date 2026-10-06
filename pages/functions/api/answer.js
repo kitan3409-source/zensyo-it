@@ -1,5 +1,5 @@
 import {
-  getUser, getPower, getTotal, bumpMission, grantAch, damageBoss,
+  getUser, getPower, getTotal, getCorrect, levelOf, bumpMission, grantAch, damageBoss,
   checkRegions, rankOf, verifySession, json,
 } from "../_game.js";
 
@@ -42,6 +42,9 @@ export async function onRequestPost({ request, env }) {
   let bossRes = null;
   if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
   const total = await getTotal(env, sess.email);
+  const correctTotal = await getCorrect(env, sess.email);
+  const level = levelOf(correctTotal);
+  const levelUp = level > levelOf(correctTotal - (b.correct ? 1 : 0)) ? level : null;
   const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
   const newAch = [];
   const tryA = async (k, c) => { const a = await grantAch(env, sess.email, k, c); if (a) newAch.push(a); };
@@ -56,6 +59,8 @@ export async function onRequestPost({ request, env }) {
   await tryA("early", hour < 7);
   await tryA("night", hour >= 23);
   await tryA("rich", (u.lifetime || 0) + earned >= 1000);
+  await tryA("lv5", level >= 5);
+  await tryA("lv10", level >= 10);
   if (bossRes && bossRes.killed) await tryA("boss", true);
   const regionHits = await checkRegions(env, sess.email, new URL(request.url).origin);
   for (const r of regionHits) newAch.push(r);
@@ -66,6 +71,7 @@ export async function onRequestPost({ request, env }) {
     missions_done: doneM, ach_new: newAch,
     total, rank: rankOf(total),
     rank_up: rankOf(total) !== rankOf(total - 1) ? rankOf(total) : null,
+    level, correct_total: correctTotal, level_up: levelUp,
     boss: bossRes,
   });
 }
