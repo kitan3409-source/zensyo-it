@@ -252,8 +252,9 @@
   <div class="controls">
     <div id="signinArea" style="flex:1">
       <div id="manualLogin" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <input type="text" id="inCls" placeholder="クラス(例:2-5)" style="width:6.5em">
-        <input type="text" id="inNum" placeholder="番号" style="width:4em">
+        <select id="inYear" title="年" style="width:auto;flex:0 0 auto"></select>
+        <select id="inCls" title="組" style="width:auto;flex:0 0 auto"></select>
+        <select id="inNum" title="番号" style="width:auto;flex:0 0 auto"></select>
         <input type="text" id="inName" placeholder="名前" style="width:9em">
         <input type="password" id="inPin" placeholder="PIN(4文字以上)" style="width:9em">
         <button class="btn" id="loginBtn" style="margin-top:0;padding:10px 18px">ログイン</button>
@@ -362,15 +363,27 @@ const $ = (id) => document.getElementById(id);
 
 let token = localStorage.getItem('quiz-token') || '';
 
+[['inYear', '年', 3], ['inCls', '組', 9], ['inNum', '番号', 50]].forEach(([id, label, max]) => {
+  const s = $(id);
+  s.add(new Option(label, '', true, true));
+  s.options[0].disabled = true;
+  for (let i = 1; i <= max; i++) s.add(new Option(String(i), String(i)));
+});
+
 $('loginBtn').onclick = doLogin;
 $('inPin').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 $('inName').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 
 async function doLogin() {
   const body = {
-    cls: $('inCls').value.trim(), num: $('inNum').value.trim(),
+    cls: `${$('inYear').value}-${$('inCls').value}`, num: $('inNum').value,
     name: $('inName').value.trim(), pin: $('inPin').value
   };
+  if (!$('inYear').value || !$('inCls').value || !$('inNum').value) {
+    $('loginHint').textContent = '年・組・番号を選んでください';
+    $('loginHint').style.color = 'var(--bad)';
+    return;
+  }
   const r = await fetch('/api/student_login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
