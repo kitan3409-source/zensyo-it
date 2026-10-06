@@ -6,6 +6,31 @@ export default {
       return json({ client_id: env.GOOGLE_CLIENT_ID || "" });
     }
 
+    if (url.pathname === "/api/dbg") {
+      const out = [];
+      try {
+        await ensureGameTables(env);
+        out.push("ensureGameTables ok");
+      } catch (e) { out.push("ensureGameTables FAIL: " + String(e)); }
+      try {
+        await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind("x").first();
+        out.push("pins select ok");
+      } catch (e) { out.push("pins FAIL: " + String(e)); }
+      try {
+        const s = await getSecret(env);
+        out.push("getSecret ok " + s.length);
+      } catch (e) { out.push("getSecret FAIL: " + String(e)); }
+      try {
+        const sig = await hmacSha256("x", "y");
+        out.push("hmac ok " + sig.slice(0, 8));
+      } catch (e) { out.push("hmac FAIL: " + String(e)); }
+      try {
+        await hashPw("0000");
+        out.push("hashPw ok");
+      } catch (e) { out.push("hashPw FAIL: " + String(e)); }
+      return json({ out });
+    }
+
     if (url.pathname === "/api/login" && request.method === "POST") {
       let b;
       try {
