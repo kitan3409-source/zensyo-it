@@ -26,8 +26,14 @@ HD_DOMAIN = "gse.okayama-c.ed.jp"
 app = FastAPI(title="全商情報処理1級 4択クイズ")
 
 
+_TABLES_READY = False
+
+
 def get_db() -> sqlite3.Connection:
+    global _TABLES_READY
     conn = sqlite3.connect(DB_PATH)
+    if _TABLES_READY:
+        return conn
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS answers (
@@ -83,17 +89,26 @@ def get_db() -> sqlite3.Connection:
         except sqlite3.OperationalError:
             pass
     conn.commit()
+    _TABLES_READY = True
     return conn
 
 
+_SECRET_CACHE = None
+
+
 def get_secret(conn: sqlite3.Connection) -> str:
+    global _SECRET_CACHE
+    if _SECRET_CACHE:
+        return _SECRET_CACHE
     row = conn.execute("SELECT value FROM settings WHERE key='session_secret'").fetchone()
     if row and row[0]:
+        _SECRET_CACHE = row[0]
         return row[0]
     s = secrets.token_hex(16)
     conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)", (s,))
     conn.commit()
-    return s
+    _SECRET_CACHE = row[0] if row and row[0] else s
+    return _SECRET_CACHE
 
 
 def make_token(conn: sqlite3.Connection, email: str, name: str) -> str:
@@ -485,10 +500,24 @@ def bump_mission(conn: sqlite3.Connection, email: str, key: str, val: int, addit
     return None
 
 
+_PW_CACHE = {"value": None, "ts": 0.0}
+
+
+def clear_pw_cache():
+    _PW_CACHE["value"] = None
+    _PW_CACHE["ts"] = 0.0
+
+
 def pw_matches(conn: sqlite3.Connection, submitted: str) -> bool:
-    row = conn.execute("SELECT value FROM settings WHERE key='pw'").fetchone()
-    if row and row[0]:
-        return row[0] in (hashlib.sha256(submitted.encode()).hexdigest(), submitted)
+    if _PW_CACHE["ts"] > time.time() - 60:
+        stored = _PW_CACHE["value"]
+    else:
+        row = conn.execute("SELECT value FROM settings WHERE key='pw'").fetchone()
+        stored = row[0] if row and row[0] else None
+        _PW_CACHE["value"] = stored
+        _PW_CACHE["ts"] = time.time()
+    if stored:
+        return stored in (hashlib.sha256(submitted.encode()).hexdigest(), submitted)
     return submitted == TEACHER_PASSWORD
 
 
@@ -873,6 +902,7 @@ def post_password(p: PasswordIn):
         (hashlib.sha256(np.encode()).hexdigest(),),
     )
     conn.commit()
+    clear_pw_cache()
     conn.close()
     return {"ok": True}
 

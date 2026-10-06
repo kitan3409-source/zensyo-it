@@ -197,7 +197,10 @@ export async function getTotal(env, email) {
   return (r && r.c) || 0;
 }
 
+let TABLES_READY = false;
+
 export async function ensureGameTables(env) {
+  if (TABLES_READY) return;
   const stmts = [
     "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0, last_login TEXT DEFAULT '', cur_streak INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS inventory (email TEXT, item TEXT, PRIMARY KEY (email, item))",
@@ -223,6 +226,7 @@ export async function ensureGameTables(env) {
     "DELETE FROM equipped WHERE item IN ('x6','g12')",
   ];
   for (const m of mig) { try { await env.DB.prepare(m).run(); } catch {} }
+  TABLES_READY = true;
 }
 
 export async function getUser(env, email, name) {
@@ -420,19 +424,49 @@ export async function hmacSha256(secret, msg) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+let SECRET_CACHE = null;
+
 export async function getSecret(env) {
+  if (SECRET_CACHE) return SECRET_CACHE;
   await env.DB.prepare(
     "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
   ).run();
   const r = await env.DB.prepare("SELECT value FROM settings WHERE key='session_secret'").first();
-  if (r && r.value) return r.value;
+  if (r && r.value) { SECRET_CACHE = r.value; return r.value; }
   const s = [...crypto.getRandomValues(new Uint8Array(16))]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   await env.DB.prepare(
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
   ).bind(s).run();
+  SECRET_CACHE = s;
   return s;
+}
+
+let PW_CACHE = { value: null, ts: 0 };
+
+export function clearPwCache() {
+  PW_CACHE = { value: null, ts: 0 };
+}
+
+export async function pwMatches(env, submitted) {
+  try {
+    let stored;
+    if (PW_CACHE.ts > Date.now() - 60000) {
+      stored = PW_CACHE.value;
+    } else {
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+      ).run();
+      const r = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
+      stored = (r && r.value) || null;
+      PW_CACHE = { value: stored, ts: Date.now() };
+    }
+    if (stored) {
+      return stored === (await hashPw(submitted)) || stored === submitted;
+    }
+  } catch {}
+  return submitted === (env.TEACHER_PW || "sensei");
 }
 
 export async function verifySession(env, token) {

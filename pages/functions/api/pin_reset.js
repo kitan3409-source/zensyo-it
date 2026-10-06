@@ -1,4 +1,4 @@
-import { ensureGameTables, hashPw, json } from "../_game.js";
+import { ensureGameTables, pwMatches, json } from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -15,12 +15,3 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true });
 }
 
-async function pwMatches(env, submitted) {
-  const row = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
-  const TEACHER_PW = env.TEACHER_PW || "sensei";
-  if (row && row.value) {
-    const h = await hashPw(submitted);
-    return row.value === h || row.value === submitted;
-  }
-  return submitted === TEACHER_PW;
-}

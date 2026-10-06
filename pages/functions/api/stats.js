@@ -1,4 +1,4 @@
-import { allItems, rankOf, levelOf, basePower, getBoss, json } from "../_game.js";
+import { allItems, rankOf, levelOf, basePower, getBoss, pwMatches, json } from "../_game.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -52,24 +52,6 @@ export async function onRequestGet({ request, env }) {
     })),
     boss,
   });
-}
-
-async function hashPw(s) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function pwMatches(env, submitted) {
-  try {
-    await env.DB.prepare(
-      "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
-    ).run();
-    const r = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
-    if (r && r.value) {
-      return r.value === (await hashPw(submitted)) || r.value === submitted;
-    }
-  } catch {}
-  return submitted === (env.TEACHER_PW || "sensei");
 }
 
 

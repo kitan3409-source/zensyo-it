@@ -132,7 +132,7 @@
       <div class="okmsg" id="pwOk">変更しました</div>
       <button class="btn" id="pwBtn">変更</button>
     </div>
-    <div class="refreshed">10秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
+    <div class="refreshed">60秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
   </div>
 </div>
 
@@ -256,7 +256,7 @@ $('resetBtn').onclick = async () => {
 };
 
 if (pw) load();
-setInterval(() => { if (pw) load(); }, 10000);
+setInterval(() => { if (pw) load(); }, 60000);
 </script>
 </body>
 </html>

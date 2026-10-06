@@ -1,34 +1,18 @@
 export default {
   async fetch(request, env) {
+    try {
+      return await handle(request, env);
+    } catch {
+      return json({ error: "サーバーが混み合っています。少し待ってからもう一度試してください" }, 503);
+    }
+  },
+};
+
+async function handle(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/config") {
       return json({ client_id: env.GOOGLE_CLIENT_ID || "" });
-    }
-
-    if (url.pathname === "/api/dbg") {
-      const out = [];
-      try {
-        await ensureGameTables(env);
-        out.push("ensureGameTables ok");
-      } catch (e) { out.push("ensureGameTables FAIL: " + String(e)); }
-      try {
-        await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind("x").first();
-        out.push("pins select ok");
-      } catch (e) { out.push("pins FAIL: " + String(e)); }
-      try {
-        const s = await getSecret(env);
-        out.push("getSecret ok " + s.length);
-      } catch (e) { out.push("getSecret FAIL: " + String(e)); }
-      try {
-        const sig = await hmacSha256("x", "y");
-        out.push("hmac ok " + sig.slice(0, 8));
-      } catch (e) { out.push("hmac FAIL: " + String(e)); }
-      try {
-        await hashPw("0000");
-        out.push("hashPw ok");
-      } catch (e) { out.push("hashPw FAIL: " + String(e)); }
-      return json({ out });
     }
 
     if (url.pathname === "/api/login" && request.method === "POST") {
@@ -70,19 +54,23 @@ export default {
       const pin = String(b.pin || "");
       if (!sid || sid === "-" || !name) return json({ error: "クラス・番号・名前を入れてください" }, 400);
       if (pin.length < 4) return json({ error: "PINは4文字以上にしてください" }, 400);
-      await ensureGameTables(env);
-      const stored = await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(sid).first();
-      const hash = await hashPw(pin);
-      if (stored) {
-        if (stored.pin !== hash) return json({ error: "PINが違います（忘れたら先生にリセットしてもらって）" }, 403);
-      } else {
-        await env.DB.prepare("INSERT INTO pins (email, pin) VALUES (?, ?)").bind(sid, hash).run();
+      try {
+        await ensureGameTables(env);
+        const stored = await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(sid).first();
+        const hash = await hashPw(pin);
+        if (stored) {
+          if (stored.pin !== hash) return json({ error: "PINが違います（忘れたら先生にリセットしてもらって）" }, 403);
+        } else {
+          await env.DB.prepare("INSERT INTO pins (email, pin) VALUES (?, ?)").bind(sid, hash).run();
+        }
+        const secret = await getSecret(env);
+        const exp = Date.now() + 7 * 24 * 3600 * 1000;
+        const payload = `${sid}|${name}|${exp}`;
+        const sig = await hmacSha256(secret, payload);
+        return json({ token: b64e(payload) + "." + sig, display: `${sid} ${name}` });
+      } catch {
+        return json({ error: "サーバーが混み合っています。少し待ってからもう一度試してください" }, 503);
       }
-      const secret = await getSecret(env);
-      const exp = Date.now() + 7 * 24 * 3600 * 1000;
-      const payload = `${sid}|${name}|${exp}`;
-      const sig = await hmacSha256(secret, payload);
-      return json({ token: b64e(payload) + "." + sig, display: `${sid} ${name}` });
     }
 
     if (url.pathname === "/api/pin_reset" && request.method === "POST") {
@@ -382,6 +370,7 @@ export default {
       await env.DB.prepare(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('pw', ?)"
       ).bind(await hashPw(np)).run();
+      PW_CACHE = { value: null, ts: 0 };
       return json({ ok: true });
     }
 
@@ -447,8 +436,7 @@ export default {
     const map = { "/": "/index.html", "/teacher": "/teacher.html", "/terms": "/terms.json" };
     const assetPath = map[url.pathname] || url.pathname;
     return env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
-  },
-};
+}
 
 async function body(request) {
   try {
@@ -653,7 +641,10 @@ async function getTotal(env, email) {
   return (r && r.c) || 0;
 }
 
+let TABLES_READY = false;
+
 async function ensureGameTables(env) {
+  if (TABLES_READY) return;
   const stmts = [
     "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0, last_login TEXT DEFAULT '', cur_streak INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS inventory (email TEXT, item TEXT, PRIMARY KEY (email, item))",
@@ -680,6 +671,7 @@ async function ensureGameTables(env) {
     "DELETE FROM equipped WHERE item NOT IN (SELECT item FROM inventory WHERE inventory.email = equipped.email)",
   ];
   for (const m of mig) { try { await env.DB.prepare(m).run(); } catch {} }
+  TABLES_READY = true;
 }
 
 async function getUser(env, email, name) {
@@ -878,18 +870,22 @@ async function hmacSha256(secret, msg) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+let SECRET_CACHE = null;
+
 async function getSecret(env) {
+  if (SECRET_CACHE) return SECRET_CACHE;
   await env.DB.prepare(
     "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
   ).run();
   const r = await env.DB.prepare("SELECT value FROM settings WHERE key='session_secret'").first();
-  if (r && r.value) return r.value;
+  if (r && r.value) { SECRET_CACHE = r.value; return r.value; }
   const s = [...crypto.getRandomValues(new Uint8Array(16))]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   await env.DB.prepare(
     "INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)"
   ).bind(s).run();
+  SECRET_CACHE = s;
   return s;
 }
 
@@ -902,7 +898,12 @@ async function verifySession(env, token) {
   } catch {
     return null;
   }
-  const secret = await getSecret(env);
+  let secret;
+  try {
+    secret = await getSecret(env);
+  } catch {
+    return null;
+  }
   if ((await hmacSha256(secret, payload)) !== sig) return null;
   const [email, name, exp] = payload.split("|");
   if (Number(exp) < Date.now()) return null;
@@ -914,14 +915,23 @@ async function hashPw(s) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+let PW_CACHE = { value: null, ts: 0 };
+
 async function pwMatches(env, submitted) {
   try {
-    await env.DB.prepare(
-      "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
-    ).run();
-    const r = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
-    if (r && r.value) {
-      return r.value === (await hashPw(submitted)) || r.value === submitted;
+    let stored;
+    if (PW_CACHE.ts > Date.now() - 60000) {
+      stored = PW_CACHE.value;
+    } else {
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+      ).run();
+      const r = await env.DB.prepare("SELECT value FROM settings WHERE key='pw'").first();
+      stored = (r && r.value) || null;
+      PW_CACHE = { value: stored, ts: Date.now() };
+    }
+    if (stored) {
+      return stored === (await hashPw(submitted)) || stored === submitted;
     }
   } catch {}
   return submitted === (env.TEACHER_PW || "sensei");
