@@ -672,10 +672,15 @@ async function ensureGameTables(env) {
     "UPDATE equipped SET slot='lhand' WHERE slot='acc'",
     "DELETE FROM equipped WHERE item IN ('x6','g12')",
     "DELETE FROM equipped WHERE item NOT IN (SELECT item FROM inventory WHERE inventory.email = equipped.email)",
-    "INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term",
-    "UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0",
   ];
   for (const m of mig) { try { await env.DB.prepare(m).run(); } catch {} }
+  try {
+    const ts = await env.DB.prepare("SELECT term FROM term_stats LIMIT 1").first();
+    if (!ts) {
+      await env.DB.prepare("INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term").run();
+      await env.DB.prepare("UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0").run();
+    }
+  } catch {}
   TABLES_READY = true;
 }
 
