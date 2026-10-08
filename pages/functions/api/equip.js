@@ -1,4 +1,4 @@
-import { SLOTS, allItems, ensureGameTables, getPower, grantAch, verifySession, json } from "../_game.js";
+import { SLOTS, allItems, ensureGameTables, getUser, getTotals, getPower, grantAch, verifySession, json } from "../_game.js";
 
 export async function onRequestPost({ request, env }) {
   let b;
@@ -29,5 +29,7 @@ export async function onRequestPost({ request, env }) {
     "SELECT COUNT(*) AS c FROM equipped WHERE email=?"
   ).bind(sess.email).first();
   await grantAch(env, sess.email, "fulleq", (ec && ec.c) >= SLOTS.length);
-  return json({ ok: true, power: await getPower(env, sess.email) });
+  const u = await getUser(env, sess.email, sess.name);
+  const t = await getTotals(env, u);
+  return json({ ok: true, power: await getPower(env, sess.email, t.correct) });
 }

@@ -1,6 +1,6 @@
 import {
   ALL_ITEMS, GACHA_ITEMS, MISSIONS, ACH, todayJST, rankOf, nextRankAt, levelOf, basePower,
-  getUser, getPower, getTotal, getCorrect, getRegions, getBoss, grantAch, verifySession, json,
+  getUser, getPower, getTotals, getRegions, getBoss, grantAch, verifySession, json,
 } from "../_game.js";
 
 export async function onRequestGet({ request, env }) {
@@ -29,13 +29,14 @@ export async function onRequestGet({ request, env }) {
   const ach = await env.DB.prepare("SELECT key FROM achievements WHERE email=?").bind(sess.email).all();
   const equipped = {};
   for (const r of eq.results) equipped[r.slot] = r.item;
-  const total = await getTotal(env, sess.email);
-  const correct = await getCorrect(env, sess.email);
+  const tot = await getTotals(env, u);
+  const total = tot.total;
+  const correct = tot.correct;
   const level = levelOf(correct);
   return json({
     display: `${sess.email.split("@")[0]} ${sess.name}`,
     points: u.points,
-    power: await getPower(env, sess.email),
+    power: await getPower(env, sess.email, correct),
     base_power: basePower(level),
     total,
     correct_total: correct,

@@ -1,57 +1,57 @@
-import { allItems, rankOf, levelOf, basePower, getBoss, pwMatches, json } from "../_game.js";
+import { allItems, rankOf, levelOf, basePower, getBoss, getTotals, ensureGameTables, pwMatches, json } from "../_game.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   if (!(await pwMatches(env, url.searchParams.get("pw") || ""))) {
     return json({ error: "forbidden" }, 403);
   }
-  const students = await env.DB.prepare(
-    "SELECT student, COUNT(*) AS answered, SUM(correct) AS correct, MAX(ts) AS last_ts FROM answers GROUP BY student ORDER BY last_ts DESC"
-  ).all();
-  const terms = await env.DB.prepare(
-    "SELECT term, COUNT(*) AS answered, SUM(correct) AS correct FROM answers GROUP BY term ORDER BY CAST(SUM(correct) AS REAL)/COUNT(*) ASC"
-  ).all();
-  const rate = (r) => (r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0);
-  let ptMap = {}, pwMap = {}, streakMap = {}, corMap = {};
-  for (const r of students.results) corMap[String(r.student).split(" ")[0]] = r.correct || 0;
+  await ensureGameTables(env);
   try {
-    const us = await env.DB.prepare("SELECT email, points, login_streak FROM users").all();
+    const us = await env.DB.prepare(
+      "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
+    ).all();
     const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
+    const termRows = await env.DB.prepare(
+      "SELECT term, answered, correct FROM term_stats ORDER BY CAST(correct AS REAL)/MAX(answered,1) ASC"
+    ).all();
     const all = allItems();
-    for (const u of us.results) {
-      const k = u.email.split("@")[0];
-      ptMap[k] = u.points;
-      pwMap[k] = basePower(levelOf(corMap[k] || 0));
-      streakMap[k] = u.login_streak || 0;
-    }
+    const eqP = {};
     for (const r of eqs.results) {
-      const k = r.email.split("@")[0];
-      if (all[r.item] && pwMap[k] !== undefined) pwMap[k] += all[r.item].power;
+      const it = all[r.item];
+      if (it) eqP[r.email] = (eqP[r.email] || 0) + it.power;
     }
-  } catch {}
-  let boss = null;
-  try { boss = await getBoss(env, ""); } catch {}
-  return json({
-    students: students.results.map((r) => ({
-      student: r.student,
-      answered: r.answered,
-      correct: r.correct,
-      rate: rate(r),
-      points: ptMap[String(r.student).split(" ")[0]] || 0,
-      power: pwMap[String(r.student).split(" ")[0]] || 100,
-      level: levelOf(r.correct || 0),
-      rank: rankOf(r.answered),
-      streak: streakMap[String(r.student).split(" ")[0]] || 0,
-      last_ts: r.last_ts,
-    })),
-    terms: terms.results.map((r) => ({
-      term: r.term,
-      answered: r.answered,
-      correct: r.correct,
-      rate: rate(r),
-    })),
-    boss,
-  });
+    const students = [];
+    for (const u of us.results) {
+      const t = await getTotals(env, u);
+      const a = t.total;
+      const c = t.correct;
+      students.push({
+        student: `${u.email.split("@")[0]} ${u.name || ""}`.trim(),
+        answered: a,
+        correct: c,
+        rate: a ? Math.round((c / a) * 1000) / 10 : 0,
+        points: u.points || 0,
+        power: basePower(levelOf(c)) + (eqP[u.email] || 0),
+        level: levelOf(c),
+        rank: rankOf(a),
+        streak: u.login_streak || 0,
+        last_ts: u.last_activity || 0,
+      });
+    }
+    students.sort((x, y) => y.last_ts - x.last_ts);
+    let boss = null;
+    try { boss = await getBoss(env, ""); } catch {}
+    return json({
+      students,
+      terms: termRows.results.map((r) => ({
+        term: r.term,
+        answered: r.answered,
+        correct: r.correct,
+        rate: r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0,
+      })),
+      boss,
+    });
+  } catch (e) {
+    return json({ error: String(e.message || e) }, 500);
+  }
 }
-
-

@@ -73,9 +73,19 @@ def get_db() -> sqlite3.Connection:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)"
     )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS term_stats (term TEXT PRIMARY KEY, answered INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, last_ts REAL)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_answers_student ON answers(student)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_answers_ts ON answers(ts)")
     for col in ("login_streak", "best_streak", "lifetime", "gacha_count"):
         try:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+    for col, dft in (("answered_total", -1), ("correct_total", -1), ("last_activity", 0)):
+        try:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT {dft}")
         except sqlite3.OperationalError:
             pass
     for m in (
@@ -83,6 +93,8 @@ def get_db() -> sqlite3.Connection:
         "UPDATE equipped SET slot='body' WHERE slot='armor'",
         "UPDATE equipped SET slot='lhand' WHERE slot='acc'",
         "DELETE FROM equipped WHERE item IN ('x6','g12')",
+        "INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term",
+        "UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0",
     ):
         try:
             conn.execute(m)
@@ -319,22 +331,25 @@ def week_key() -> str:
     return f"{d.tm_year}-W{week}"
 
 
-def get_total(conn: sqlite3.Connection, email: str) -> int:
+def get_totals(conn: sqlite3.Connection, u: dict) -> dict:
+    if (u.get("answered_total") or 0) >= 0 and (u.get("correct_total") or 0) >= 0:
+        return {"total": u["answered_total"], "correct": u["correct_total"]}
     r = conn.execute(
-        "SELECT COUNT(*) FROM answers WHERE student LIKE ?", (email.split("@")[0] + " %",)
+        "SELECT COUNT(*), COALESCE(SUM(correct),0) FROM answers WHERE student LIKE ?",
+        (u["email"].split("@")[0] + " %",),
     ).fetchone()
-    return r[0] if r else 0
+    total, correct = (r[0] if r else 0), (r[1] if r else 0)
+    conn.execute(
+        "UPDATE users SET answered_total=?, correct_total=? WHERE email=?",
+        (total, correct, u["email"]),
+    )
+    conn.commit()
+    u["answered_total"], u["correct_total"] = total, correct
+    return {"total": total, "correct": correct}
 
 
-def get_correct(conn: sqlite3.Connection, email: str) -> int:
-    r = conn.execute(
-        "SELECT SUM(correct) FROM answers WHERE student LIKE ?", (email.split("@")[0] + " %",)
-    ).fetchone()
-    return r[0] if r and r[0] else 0
-
-
-def get_power(conn: sqlite3.Connection, email: str) -> int:
-    p = base_power(level_of(get_correct(conn, email)))
+def get_power(conn: sqlite3.Connection, email: str, correct: int) -> int:
+    p = base_power(level_of(correct))
     for (it,) in conn.execute("SELECT item FROM equipped WHERE email=?", (email,)):
         if it in ALL_ITEMS:
             p += ALL_ITEMS[it]["power"]
@@ -454,9 +469,11 @@ def get_user(conn: sqlite3.Connection, email: str, name: str) -> dict:
         conn.execute("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)", (email, name))
         conn.commit()
         return {"email": email, "name": name, "points": 0, "last_login": "", "cur_streak": 0,
-                "login_streak": 0, "best_streak": 0, "lifetime": 0, "gacha_count": 0}
+                "login_streak": 0, "best_streak": 0, "lifetime": 0, "gacha_count": 0,
+                "answered_total": -1, "correct_total": -1, "last_activity": 0}
     cols = ["email", "name", "points", "last_login", "cur_streak",
-            "login_streak", "best_streak", "lifetime", "gacha_count"]
+            "login_streak", "best_streak", "lifetime", "gacha_count",
+            "answered_total", "correct_total", "last_activity"]
     u = dict(zip(cols, row))
     if name and name != u["name"]:
         conn.execute("UPDATE users SET name=? WHERE email=?", (name, email))
@@ -568,10 +585,22 @@ def post_answer(a: AnswerIn):
         "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)",
         (student, a.term[:200], a.direction[:10], int(a.correct), time.time()),
     )
+    c01 = 1 if a.correct else 0
+    conn.execute(
+        "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, "
+        "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=? WHERE email=?",
+        (c01, time.time(), sess["email"]),
+    )
+    conn.execute(
+        "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) "
+        "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts",
+        (a.term[:200], c01, time.time()),
+    )
     conn.commit()
     u = get_user(conn, sess["email"], sess["name"])
     streak = (u["cur_streak"] or 0) + 1 if a.correct else 0
-    power = get_power(conn, sess["email"])
+    tot = get_totals(conn, u)
+    power = get_power(conn, sess["email"], tot["correct"])
     combo = min(streak * 2, 20) if a.correct and streak >= 3 else 0
     earned = (10 if a.correct else 2) + combo
     conn.execute(
@@ -585,8 +614,8 @@ def post_answer(a: AnswerIn):
         if m:
             done.append(m)
     boss_res = damage_boss(conn, sess["email"], 1 + power // 80) if a.correct else None
-    total = get_total(conn, sess["email"])
-    correct_total = get_correct(conn, sess["email"])
+    total = tot["total"]
+    correct_total = tot["correct"]
     level = level_of(correct_total)
     level_up = level if level > level_of(correct_total - (1 if a.correct else 0)) else None
     hour = time.gmtime(time.time() + 9 * 3600).tm_hour
@@ -641,10 +670,11 @@ def get_me(token: str = ""):
     equipped = {r[0]: r[1] for r in conn.execute("SELECT slot, item FROM equipped WHERE email=?", (sess["email"],))}
     ms = {r[0]: (r[1], r[2]) for r in conn.execute("SELECT key, progress, claimed FROM missions WHERE email=? AND day=?", (sess["email"], today))}
     unlocked = [r[0] for r in conn.execute("SELECT key FROM achievements WHERE email=?", (sess["email"],))]
-    total = get_total(conn, sess["email"])
-    correct = get_correct(conn, sess["email"])
+    tot = get_totals(conn, u)
+    total = tot["total"]
+    correct = tot["correct"]
     level = level_of(correct)
-    power = get_power(conn, sess["email"])
+    power = get_power(conn, sess["email"], correct)
     regions = get_regions(conn, sess["email"])
     boss = get_boss(conn, sess["email"])
     streak = u["login_streak"] or 0
@@ -723,7 +753,9 @@ def post_equip(e: EquipIn):
     ec = conn.execute("SELECT COUNT(*) FROM equipped WHERE email=?", (sess["email"],)).fetchone()[0]
     grant_ach(conn, sess["email"], "fulleq", ec >= len(SLOTS))
     conn.commit()
-    power = get_power(conn, sess["email"])
+    u = get_user(conn, sess["email"], sess["name"])
+    t = get_totals(conn, u)
+    power = get_power(conn, sess["email"], t["correct"])
     conn.close()
     return {"ok": True, "power": power}
 
@@ -735,35 +767,28 @@ def get_ranking(token: str = ""):
     if not sess:
         conn.close()
         raise HTTPException(401, "ログインしてください")
-    users = conn.execute("SELECT email, name, points, login_streak FROM users").fetchall()
+    users = conn.execute("SELECT email, name, points, login_streak, answered_total, correct_total FROM users").fetchall()
     eqs = conn.execute("SELECT email, item FROM equipped").fetchall()
-    tot_map = {}
-    cor_map = {}
-    name_map = {}
-    for s, c, sc in conn.execute("SELECT student, COUNT(*), SUM(correct) FROM answers GROUP BY student"):
-        sid = str(s).split(" ")[0]
-        tot_map[sid] = c
-        cor_map[sid] = sc or 0
-        name_map[sid] = " ".join(str(s).split(" ")[1:])
+    eq_p = {}
+    for e, it in eqs:
+        if it in ALL_ITEMS:
+            eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
     week_map = {}
     for s, c, sc in conn.execute(
         "SELECT student, COUNT(*), SUM(correct) FROM answers WHERE ts >= ? GROUP BY student",
         (time.time() - 7 * 86400,),
     ):
         week_map[str(s).split(" ")[0]] = (sc or 0) * 8 + c * 2
+    lst = []
+    for e, n, p, st, at, ct in users:
+        t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
+        sid = e.split("@")[0]
+        lst.append({"id": sid, "name": n or "",
+                    "power": base_power(level_of(t["correct"])) + eq_p.get(e, 0), "points": p, "streak": st or 0,
+                    "total": t["total"],
+                    "weekly": week_map.get(sid, 0),
+                    "rank": rank_of(t["total"])})
     conn.close()
-    power_map = {e: base_power(level_of(cor_map.get(e.split("@")[0], 0))) for e, _, _, _ in users}
-    for e, it in eqs:
-        if it in ALL_ITEMS and e in power_map:
-            power_map[e] += ALL_ITEMS[it]["power"]
-    lst = [
-        {"id": e.split("@")[0], "name": n or name_map.get(e.split("@")[0], ""),
-         "power": power_map[e], "points": p, "streak": st or 0,
-         "total": tot_map.get(e.split("@")[0], 0),
-         "weekly": week_map.get(e.split("@")[0], 0),
-         "rank": rank_of(tot_map.get(e.split("@")[0], 0))}
-        for e, n, p, st in users
-    ]
     return {
         "power": sorted(lst, key=lambda x: (-x["power"], -x["points"]))[:30],
         "weekly": sorted(lst, key=lambda x: -x["weekly"])[:30],
@@ -913,38 +938,29 @@ def get_stats(pw: str = ""):
     if not pw_matches(conn, pw):
         conn.close()
         raise HTTPException(403, "forbidden")
-    pt_map = {}
-    pw_map = {}
-    streak_map = {}
-    cor_map = {}
-    for s_, c_ in conn.execute("SELECT student, SUM(correct) FROM answers GROUP BY student"):
-        cor_map[str(s_).split(" ")[0]] = c_ or 0
-    for e, p, st in conn.execute("SELECT email, points, login_streak FROM users"):
-        k = e.split("@")[0]
-        pt_map[k] = p
-        pw_map[k] = base_power(level_of(cor_map.get(k, 0)))
-        streak_map[k] = st
+    eq_p = {}
     for e, it in conn.execute("SELECT email, item FROM equipped"):
-        k = e.split("@")[0]
-        if it in ALL_ITEMS and k in pw_map:
-            pw_map[k] += ALL_ITEMS[it]["power"]
-    students = [
-        {
-            "student": r[0],
-            "answered": r[1],
-            "correct": r[2],
-            "rate": round(r[2] / r[1] * 100, 1) if r[1] else 0,
-            "points": pt_map.get(str(r[0]).split(" ")[0], 0),
-            "power": pw_map.get(str(r[0]).split(" ")[0], 100),
-            "level": level_of(r[2] or 0),
-            "rank": rank_of(r[1]),
-            "streak": streak_map.get(str(r[0]).split(" ")[0], 0),
-            "last_ts": r[3],
-        }
-        for r in conn.execute(
-            "SELECT student, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY student ORDER BY MAX(ts) DESC"
-        )
-    ]
+        if it in ALL_ITEMS:
+            eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
+    students = []
+    for e, n, p, st, at, ct, la in conn.execute(
+        "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
+    ):
+        t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
+        a, c = t["total"], t["correct"]
+        students.append({
+            "student": f"{e.split('@')[0]} {n or ''}".strip(),
+            "answered": a,
+            "correct": c,
+            "rate": round(c / a * 100, 1) if a else 0,
+            "points": p or 0,
+            "power": base_power(level_of(c)) + eq_p.get(e, 0),
+            "level": level_of(c),
+            "rank": rank_of(a),
+            "streak": st or 0,
+            "last_ts": la or 0,
+        })
+    students.sort(key=lambda x: -x["last_ts"])
     terms = [
         {
             "term": r[0],
@@ -953,7 +969,7 @@ def get_stats(pw: str = ""):
             "rate": round(r[2] / r[1] * 100, 1) if r[1] else 0,
         }
         for r in conn.execute(
-            "SELECT term, COUNT(*), SUM(correct) FROM answers GROUP BY term ORDER BY CAST(SUM(correct) AS REAL)/COUNT(*) ASC"
+            "SELECT term, answered, correct FROM term_stats ORDER BY CAST(correct AS REAL)/MAX(answered,1) ASC"
         )
     ]
     boss = get_boss(conn)

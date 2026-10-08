@@ -113,10 +113,11 @@ async function handle(request, env) {
       const ach = await env.DB.prepare("SELECT key FROM achievements WHERE email=?").bind(sess.email).all();
       const equipped = {};
       for (const r of eq.results) equipped[r.slot] = r.item;
-      const total = await getTotal(env, sess.email);
-      const correct = await getCorrect(env, sess.email);
+      const tot = await getTotals(env, u);
+      const total = tot.total;
+      const correct = tot.correct;
       const level = levelOf(correct);
-      const power = await getPower(env, sess.email);
+      const power = await getPower(env, sess.email, correct);
       return json({
         display: `${sess.email.split("@")[0]} ${sess.name}`,
         points: u.points,
@@ -218,50 +219,47 @@ async function handle(request, env) {
         "SELECT COUNT(*) AS c FROM equipped WHERE email=?"
       ).bind(sess.email).first();
       await grantAch(env, sess.email, "fulleq", (ec && ec.c) >= SLOTS.length);
-      return json({ ok: true, power: await getPower(env, sess.email) });
+      const ue = await getUser(env, sess.email, sess.name);
+      const te = await getTotals(env, ue);
+      return json({ ok: true, power: await getPower(env, sess.email, te.correct) });
     }
 
     if (url.pathname === "/api/ranking") {
       const sess = await verifySession(env, url.searchParams.get("token") || "");
       if (!sess) return json({ error: "ログインしてください" }, 401);
       await ensureGameTables(env);
-      const users = await env.DB.prepare("SELECT email, name, points, login_streak FROM users").all();
+      const users = await env.DB.prepare(
+        "SELECT email, name, points, login_streak, answered_total, correct_total FROM users"
+      ).all();
       const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
       const all = ALL_ITEMS;
-      const totals = await env.DB.prepare(
-        "SELECT student, COUNT(*) AS c, SUM(correct) AS cor FROM answers GROUP BY student"
-      ).all();
-      const corMap = {};
-      for (const r of totals.results) corMap[String(r.student).split(" ")[0]] = r.cor || 0;
-      const powerMap = {};
-      for (const u of users.results)
-        powerMap[u.email] = basePower(levelOf(corMap[u.email.split("@")[0]] || 0));
+      const eqP = {};
       for (const r of eqs.results) {
-        if (all[r.item] && powerMap[r.email] !== undefined) powerMap[r.email] += all[r.item].power;
+        const it = all[r.item];
+        if (it) eqP[r.email] = (eqP[r.email] || 0) + it.power;
       }
       const week = await env.DB.prepare(
         "SELECT student, COUNT(*) AS c, SUM(correct) AS s FROM answers WHERE ts >= ? GROUP BY student"
       ).bind(Date.now() / 1000 - 7 * 86400).all();
-      const totMap = {}, nameMap = {}, weekMap = {};
-      for (const r of totals.results) {
-        const id = String(r.student).split(" ")[0];
-        totMap[id] = r.c;
-        nameMap[id] = String(r.student).split(" ").slice(1).join(" ");
-      }
+      const weekMap = {};
       for (const r of week.results) {
         weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 8 + r.c * 2;
       }
-      const entry = (u) => ({
-        id: u.email.split("@")[0],
-        name: u.name || nameMap[u.email.split("@")[0]] || "",
-        power: powerMap[u.email],
-        points: u.points,
-        streak: u.login_streak || 0,
-        total: totMap[u.email.split("@")[0]] || 0,
-        weekly: weekMap[u.email.split("@")[0]] || 0,
-        rank: rankOf(totMap[u.email.split("@")[0]] || 0),
-      });
-      const list = users.results.map(entry);
+      const list = [];
+      for (const u of users.results) {
+        const t = await getTotals(env, u);
+        const id = u.email.split("@")[0];
+        list.push({
+          id,
+          name: u.name || "",
+          power: basePower(levelOf(t.correct)) + (eqP[u.email] || 0),
+          points: u.points,
+          streak: u.login_streak || 0,
+          total: t.total,
+          weekly: weekMap[id] || 0,
+          rank: rankOf(t.total),
+        });
+      }
       return json({
         power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
         weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
@@ -286,9 +284,19 @@ async function handle(request, env) {
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
+      const c01 = b.correct ? 1 : 0;
+      await env.DB.prepare(
+        "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, " +
+        "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=? WHERE email=?"
+      ).bind(c01, Date.now() / 1000, sess.email).run();
+      await env.DB.prepare(
+        "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
+        "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"
+      ).bind(String(b.term || "").slice(0, 200), c01, Date.now() / 1000).run();
       const u = await getUser(env, sess.email, sess.name);
       const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
-      const power = await getPower(env, sess.email);
+      const tot = await getTotals(env, u);
+      const power = await getPower(env, sess.email, tot.correct);
       const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
       const earned = (b.correct ? 10 : 2) + combo;
       await env.DB.prepare(
@@ -305,8 +313,8 @@ async function handle(request, env) {
       }
       let bossRes = null;
       if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
-      const total = await getTotal(env, sess.email);
-      const correctTotal = await getCorrect(env, sess.email);
+      const total = tot.total;
+      const correctTotal = tot.correct;
       const level = levelOf(correctTotal);
       const levelUp = level > levelOf(correctTotal - (b.correct ? 1 : 0)) ? level : null;
       const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
@@ -349,7 +357,7 @@ async function handle(request, env) {
       }
       if (!(await pwMatches(env, b.pw || ""))) return json({ error: "forbidden" }, 403);
       await ensureGameTables(env);
-      for (const t of ["answers", "users", "inventory", "equipped", "missions", "achievements", "pins", "boss", "boss_damage"]) {
+      for (const t of ["answers", "users", "inventory", "equipped", "missions", "achievements", "pins", "boss", "boss_damage", "term_stats"]) {
         try {
           await env.DB.prepare(`DELETE FROM ${t}`).run();
         } catch {}
@@ -379,58 +387,54 @@ async function handle(request, env) {
         return json({ error: "forbidden" }, 403);
       }
       if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
-      let students, terms;
+      await ensureGameTables(env);
       try {
-        students = await env.DB.prepare(
-          "SELECT student, COUNT(*) AS answered, SUM(correct) AS correct, MAX(ts) AS last_ts FROM answers GROUP BY student ORDER BY last_ts DESC"
+        const us = await env.DB.prepare(
+          "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
         ).all();
-        terms = await env.DB.prepare(
-          "SELECT term, COUNT(*) AS answered, SUM(correct) AS correct FROM answers GROUP BY term ORDER BY CAST(SUM(correct) AS REAL)/COUNT(*) ASC"
+        const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
+        const termRows = await env.DB.prepare(
+          "SELECT term, answered, correct FROM term_stats ORDER BY CAST(correct AS REAL)/MAX(answered,1) ASC"
         ).all();
+        const eqP = {};
+        for (const r of eqs.results) {
+          const it = ALL_ITEMS[r.item];
+          if (it) eqP[r.email] = (eqP[r.email] || 0) + it.power;
+        }
+        const students = [];
+        for (const u of us.results) {
+          const t = await getTotals(env, u);
+          const a = t.total;
+          const c = t.correct;
+          students.push({
+            student: `${u.email.split("@")[0]} ${u.name || ""}`.trim(),
+            answered: a,
+            correct: c,
+            rate: a ? Math.round((c / a) * 1000) / 10 : 0,
+            points: u.points || 0,
+            power: basePower(levelOf(c)) + (eqP[u.email] || 0),
+            level: levelOf(c),
+            rank: rankOf(a),
+            streak: u.login_streak || 0,
+            last_ts: u.last_activity || 0,
+          });
+        }
+        students.sort((x, y) => y.last_ts - x.last_ts);
+        let boss = null;
+        try { boss = await getBoss(env, ""); } catch {}
+        return json({
+          students,
+          terms: termRows.results.map((r) => ({
+            term: r.term,
+            answered: r.answered,
+            correct: r.correct,
+            rate: r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0,
+          })),
+          boss,
+        });
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
-      const rate = (r) => (r.answered ? Math.round((r.correct / r.answered) * 1000) / 10 : 0);
-      let ptMap = {}, pwMap = {}, streakMap = {}, corMap = {};
-      for (const r of students.results) corMap[String(r.student).split(" ")[0]] = r.correct || 0;
-      try {
-        const us = await env.DB.prepare("SELECT email, points, login_streak FROM users").all();
-        const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
-        const all = ALL_ITEMS;
-        for (const u of us.results) {
-          const k = u.email.split("@")[0];
-          ptMap[k] = u.points;
-          pwMap[k] = basePower(levelOf(corMap[k] || 0));
-          streakMap[k] = u.login_streak || 0;
-        }
-        for (const r of eqs.results) {
-          const k = r.email.split("@")[0];
-          if (all[r.item] && pwMap[k] !== undefined) pwMap[k] += all[r.item].power;
-        }
-      } catch {}
-      let boss = null;
-      try { boss = await getBoss(env, ""); } catch {}
-      return json({
-        students: students.results.map((r) => ({
-          student: r.student,
-          answered: r.answered,
-          correct: r.correct,
-          rate: rate(r),
-          points: ptMap[String(r.student).split(" ")[0]] || 0,
-          power: pwMap[String(r.student).split(" ")[0]] || 100,
-          level: levelOf(r.correct || 0),
-          rank: rankOf(r.answered),
-          streak: streakMap[String(r.student).split(" ")[0]] || 0,
-          last_ts: r.last_ts,
-        })),
-        terms: terms.results.map((r) => ({
-          term: r.term,
-          answered: r.answered,
-          correct: r.correct,
-          rate: rate(r),
-        })),
-        boss,
-      });
     }
 
     const map = { "/": "/index.html", "/teacher": "/teacher.html", "/terms": "/terms.json" };
@@ -634,13 +638,6 @@ function hashCode(s) {
   return h;
 }
 
-async function getTotal(env, email) {
-  const r = await env.DB.prepare(
-    "SELECT COUNT(*) AS c FROM answers WHERE student LIKE ?"
-  ).bind(email.split("@")[0] + " %").first();
-  return (r && r.c) || 0;
-}
-
 let TABLES_READY = false;
 
 async function ensureGameTables(env) {
@@ -654,6 +651,9 @@ async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
     "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
+    "CREATE TABLE IF NOT EXISTS term_stats (term TEXT PRIMARY KEY, answered INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, last_ts REAL)",
+    "CREATE INDEX IF NOT EXISTS idx_answers_student ON answers(student)",
+    "CREATE INDEX IF NOT EXISTS idx_answers_ts ON answers(ts)",
   ];
   for (const s of stmts) await env.DB.prepare(s).run();
   const alters = [
@@ -661,6 +661,9 @@ async function ensureGameTables(env) {
     "ALTER TABLE users ADD COLUMN best_streak INTEGER DEFAULT 0",
     "ALTER TABLE users ADD COLUMN lifetime INTEGER DEFAULT 0",
     "ALTER TABLE users ADD COLUMN gacha_count INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN answered_total INTEGER DEFAULT -1",
+    "ALTER TABLE users ADD COLUMN correct_total INTEGER DEFAULT -1",
+    "ALTER TABLE users ADD COLUMN last_activity REAL DEFAULT 0",
   ];
   for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
   const mig = [
@@ -669,6 +672,8 @@ async function ensureGameTables(env) {
     "UPDATE equipped SET slot='lhand' WHERE slot='acc'",
     "DELETE FROM equipped WHERE item IN ('x6','g12')",
     "DELETE FROM equipped WHERE item NOT IN (SELECT item FROM inventory WHERE inventory.email = equipped.email)",
+    "INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term",
+    "UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0",
   ];
   for (const m of mig) { try { await env.DB.prepare(m).run(); } catch {} }
   TABLES_READY = true;
@@ -679,7 +684,7 @@ async function getUser(env, email, name) {
   let u = await env.DB.prepare("SELECT * FROM users WHERE email=?").bind(email).first();
   if (!u) {
     await env.DB.prepare("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)").bind(email, name).run();
-    u = { email, name, points: 0, last_login: "", cur_streak: 0, login_streak: 0, best_streak: 0, lifetime: 0, gacha_count: 0 };
+    u = { email, name, points: 0, last_login: "", cur_streak: 0, login_streak: 0, best_streak: 0, lifetime: 0, gacha_count: 0, answered_total: -1, correct_total: -1, last_activity: 0 };
   } else if (name && name !== u.name) {
     await env.DB.prepare("UPDATE users SET name=? WHERE email=?").bind(name, email).run();
     u.name = name;
@@ -692,16 +697,25 @@ async function countInv(env, email) {
   return (r && r.c) || 0;
 }
 
-async function getCorrect(env, email) {
+async function getTotals(env, u) {
+  if (u.answered_total >= 0 && u.correct_total >= 0) {
+    return { total: u.answered_total, correct: u.correct_total };
+  }
   const r = await env.DB.prepare(
-    "SELECT SUM(correct) AS c FROM answers WHERE student LIKE ?"
-  ).bind(email.split("@")[0] + " %").first();
-  return (r && r.c) || 0;
+    "SELECT COUNT(*) AS n, COALESCE(SUM(correct), 0) AS c FROM answers WHERE student LIKE ?"
+  ).bind(u.email.split("@")[0] + " %").first();
+  const total = (r && r.n) || 0;
+  const correct = (r && r.c) || 0;
+  await env.DB.prepare(
+    "UPDATE users SET answered_total=?, correct_total=? WHERE email=?"
+  ).bind(total, correct, u.email).run();
+  u.answered_total = total;
+  u.correct_total = correct;
+  return { total, correct };
 }
 
-async function getPower(env, email) {
+async function getPower(env, email, correct) {
   const all = ALL_ITEMS;
-  const correct = await getCorrect(env, email);
   const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
   let p = basePower(levelOf(correct));
   for (const r of rows.results) if (all[r.item]) p += all[r.item].power;

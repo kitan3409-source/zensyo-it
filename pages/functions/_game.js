@@ -190,13 +190,6 @@ function hashCode(s) {
   return h;
 }
 
-export async function getTotal(env, email) {
-  const r = await env.DB.prepare(
-    "SELECT COUNT(*) AS c FROM answers WHERE student LIKE ?"
-  ).bind(email.split("@")[0] + " %").first();
-  return (r && r.c) || 0;
-}
-
 let TABLES_READY = false;
 
 export async function ensureGameTables(env) {
@@ -210,6 +203,9 @@ export async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
     "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
+    "CREATE TABLE IF NOT EXISTS term_stats (term TEXT PRIMARY KEY, answered INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, last_ts REAL)",
+    "CREATE INDEX IF NOT EXISTS idx_answers_student ON answers(student)",
+    "CREATE INDEX IF NOT EXISTS idx_answers_ts ON answers(ts)",
   ];
   for (const s of stmts) await env.DB.prepare(s).run();
   const alters = [
@@ -217,6 +213,9 @@ export async function ensureGameTables(env) {
     "ALTER TABLE users ADD COLUMN best_streak INTEGER DEFAULT 0",
     "ALTER TABLE users ADD COLUMN lifetime INTEGER DEFAULT 0",
     "ALTER TABLE users ADD COLUMN gacha_count INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN answered_total INTEGER DEFAULT -1",
+    "ALTER TABLE users ADD COLUMN correct_total INTEGER DEFAULT -1",
+    "ALTER TABLE users ADD COLUMN last_activity REAL DEFAULT 0",
   ];
   for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
   const mig = [
@@ -224,6 +223,8 @@ export async function ensureGameTables(env) {
     "UPDATE equipped SET slot='body' WHERE slot='armor'",
     "UPDATE equipped SET slot='lhand' WHERE slot='acc'",
     "DELETE FROM equipped WHERE item IN ('x6','g12')",
+    "INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term",
+    "UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0",
   ];
   for (const m of mig) { try { await env.DB.prepare(m).run(); } catch {} }
   TABLES_READY = true;
@@ -234,7 +235,7 @@ export async function getUser(env, email, name) {
   let u = await env.DB.prepare("SELECT * FROM users WHERE email=?").bind(email).first();
   if (!u) {
     await env.DB.prepare("INSERT OR IGNORE INTO users (email, name) VALUES (?, ?)").bind(email, name).run();
-    u = { email, name, points: 0, last_login: "", cur_streak: 0, login_streak: 0, best_streak: 0, lifetime: 0, gacha_count: 0 };
+    u = { email, name, points: 0, last_login: "", cur_streak: 0, login_streak: 0, best_streak: 0, lifetime: 0, gacha_count: 0, answered_total: -1, correct_total: -1, last_activity: 0 };
   } else if (name && name !== u.name) {
     await env.DB.prepare("UPDATE users SET name=? WHERE email=?").bind(name, email).run();
     u.name = name;
@@ -247,16 +248,25 @@ export async function countInv(env, email) {
   return (r && r.c) || 0;
 }
 
-export async function getCorrect(env, email) {
+export async function getTotals(env, u) {
+  if (u.answered_total >= 0 && u.correct_total >= 0) {
+    return { total: u.answered_total, correct: u.correct_total };
+  }
   const r = await env.DB.prepare(
-    "SELECT SUM(correct) AS c FROM answers WHERE student LIKE ?"
-  ).bind(email.split("@")[0] + " %").first();
-  return (r && r.c) || 0;
+    "SELECT COUNT(*) AS n, COALESCE(SUM(correct), 0) AS c FROM answers WHERE student LIKE ?"
+  ).bind(u.email.split("@")[0] + " %").first();
+  const total = (r && r.n) || 0;
+  const correct = (r && r.c) || 0;
+  await env.DB.prepare(
+    "UPDATE users SET answered_total=?, correct_total=? WHERE email=?"
+  ).bind(total, correct, u.email).run();
+  u.answered_total = total;
+  u.correct_total = correct;
+  return { total, correct };
 }
 
-export async function getPower(env, email) {
+export async function getPower(env, email, correct) {
   const all = allItems();
-  const correct = await getCorrect(env, email);
   const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
   let p = basePower(levelOf(correct));
   for (const r of rows.results) if (all[r.item]) p += all[r.item].power;

@@ -1,5 +1,5 @@
 import {
-  getUser, getPower, getTotal, getCorrect, levelOf, bumpMission, grantAch, damageBoss,
+  getUser, getPower, getTotals, levelOf, bumpMission, grantAch, damageBoss,
   checkRegions, rankOf, verifySession, json,
 } from "../_game.js";
 
@@ -22,9 +22,19 @@ export async function onRequestPost({ request, env }) {
     b.correct ? 1 : 0,
     Date.now() / 1000
   ).run();
+  const c01 = b.correct ? 1 : 0;
+  await env.DB.prepare(
+    "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, " +
+    "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=? WHERE email=?"
+  ).bind(c01, Date.now() / 1000, sess.email).run();
+  await env.DB.prepare(
+    "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
+    "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"
+  ).bind(String(b.term || "").slice(0, 200), c01, Date.now() / 1000).run();
   const u = await getUser(env, sess.email, sess.name);
   const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
-  const power = await getPower(env, sess.email);
+  const tot = await getTotals(env, u);
+  const power = await getPower(env, sess.email, tot.correct);
   const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
   const earned = (b.correct ? 10 : 2) + combo;
   await env.DB.prepare(
@@ -41,8 +51,8 @@ export async function onRequestPost({ request, env }) {
   }
   let bossRes = null;
   if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
-  const total = await getTotal(env, sess.email);
-  const correctTotal = await getCorrect(env, sess.email);
+  const total = tot.total;
+  const correctTotal = tot.correct;
   const level = levelOf(correctTotal);
   const levelUp = level > levelOf(correctTotal - (b.correct ? 1 : 0)) ? level : null;
   const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
