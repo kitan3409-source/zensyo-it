@@ -205,6 +205,7 @@ export async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
     "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
     "CREATE TABLE IF NOT EXISTS user_extras (email TEXT PRIMARY KEY, acc_ema REAL DEFAULT -1)",
+    "CREATE TABLE IF NOT EXISTS daily_stats (date TEXT, student TEXT, correct INTEGER DEFAULT 0, PRIMARY KEY (date, student))",
     "CREATE TABLE IF NOT EXISTS term_stats (term TEXT PRIMARY KEY, answered INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, last_ts REAL)",
     "CREATE INDEX IF NOT EXISTS idx_answers_student ON answers(student)",
     "CREATE INDEX IF NOT EXISTS idx_answers_ts ON answers(ts)",
@@ -232,6 +233,14 @@ export async function ensureGameTables(env) {
     if (!ts) {
       await env.DB.prepare("INSERT OR IGNORE INTO term_stats (term, answered, correct, last_ts) SELECT term, COUNT(*), SUM(correct), MAX(ts) FROM answers GROUP BY term").run();
       await env.DB.prepare("UPDATE users SET last_activity=(SELECT MAX(ts) FROM answers WHERE student LIKE users.email || ' %') WHERE last_activity=0").run();
+    }
+    const ds = await env.DB.prepare("SELECT date FROM daily_stats LIMIT 1").first();
+    if (!ds) {
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO daily_stats (date, student, correct) " +
+        "SELECT date(ts,'unixepoch','+9 hours'), substr(student,1,instr(student||' ',' ')-1), SUM(correct) " +
+        "FROM answers GROUP BY 1, 2"
+      ).run();
     }
   } catch {}
   TABLES_READY = true;

@@ -89,6 +89,7 @@ def get_db() -> sqlite3.Connection:
         except sqlite3.OperationalError:
             pass
     conn.execute("CREATE TABLE IF NOT EXISTS user_extras (email TEXT PRIMARY KEY, acc_ema REAL DEFAULT -1)")
+    conn.execute("CREATE TABLE IF NOT EXISTS daily_stats (date TEXT, student TEXT, correct INTEGER DEFAULT 0, PRIMARY KEY (date, student))")
     for m in (
         "UPDATE equipped SET slot='rhand' WHERE slot='weapon'",
         "UPDATE equipped SET slot='body' WHERE slot='armor'",
@@ -101,6 +102,15 @@ def get_db() -> sqlite3.Connection:
             conn.execute(m)
         except sqlite3.OperationalError:
             pass
+    try:
+        if not conn.execute("SELECT date FROM daily_stats LIMIT 1").fetchone():
+            conn.execute(
+                "INSERT OR IGNORE INTO daily_stats (date, student, correct) "
+                "SELECT date(ts,'unixepoch','+9 hours'), substr(student,1,instr(student||' ',' ')-1), SUM(correct) "
+                "FROM answers GROUP BY 1, 2"
+            )
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     _TABLES_READY = True
     return conn
@@ -621,6 +631,12 @@ def post_answer(a: AnswerIn):
         "ON CONFLICT(email) DO UPDATE SET acc_ema=CASE WHEN acc_ema<0 THEN excluded.acc_ema ELSE acc_ema*0.8+excluded.acc_ema*0.2 END",
         (sess["email"], c01),
     )
+    if c01:
+        conn.execute(
+            "INSERT INTO daily_stats (date, student, correct) VALUES (date('now','+9 hours'), ?, 1) "
+            "ON CONFLICT(date, student) DO UPDATE SET correct=correct+1",
+            (sess["email"].split("@")[0],),
+        )
     conn.execute(
         "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) "
         "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts",
@@ -794,11 +810,10 @@ def get_ranking(token: str = ""):
         if it in ALL_ITEMS:
             eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
     week_map = {}
-    for s, c, sc in conn.execute(
-        "SELECT student, COUNT(*), SUM(correct) FROM answers WHERE ts >= ? GROUP BY student",
-        (time.time() - 7 * 86400,),
+    for s, sc in conn.execute(
+        "SELECT student, SUM(correct) FROM daily_stats WHERE date >= date('now','+9 hours','-6 days') GROUP BY student"
     ):
-        week_map[str(s).split(" ")[0]] = (sc or 0) * 10
+        week_map[s] = (sc or 0) * 10
     lst = []
     for e, n, p, st, at, ct in users:
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})

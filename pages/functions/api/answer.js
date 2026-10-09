@@ -42,6 +42,10 @@ export async function onRequestPost({ request, env }) {
       "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
       "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"
     ).bind(term, c01, now),
+    ...(c01 ? [env.DB.prepare(
+      "INSERT INTO daily_stats (date, student, correct) VALUES (date('now','+9 hours'), ?, 1) " +
+      "ON CONFLICT(date, student) DO UPDATE SET correct=correct+1"
+    ).bind(sess.email.split("@")[0])] : []),
   ]);
   const doneM = [];
   const m1 = await bumpMission(env, sess.email, "ans10", 1, true);
