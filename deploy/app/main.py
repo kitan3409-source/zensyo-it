@@ -620,7 +620,7 @@ def post_answer(a: AnswerIn):
     tot = get_totals(conn, u)
     power = get_power(conn, sess["email"], {"correct": tot["correct"] + c01, "total": tot["total"] + 1})
     combo = min(streak * 2, 20) if a.correct and streak >= 3 else 0
-    earned = (10 if a.correct else 0) + combo
+    earned = (10 if a.correct else -3) + combo
     conn.execute(
         "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)",
         (student, a.term[:200], a.direction[:10], c01, now),

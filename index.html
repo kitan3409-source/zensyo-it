@@ -981,7 +981,7 @@ async function answer(i) {
   fb.className = 'feedback show ' + (correct ? 'ok' : 'ng');
   fb.innerHTML = correct
     ? '<span class="label">正解！</span>'
-    : '<span class="label">不正解…</span>正解は「' + esc(t[key]) + '」';
+    : '<span class="label">不正解…</span>正解は「' + esc(t[key]) + '」<span class="sub"> -3pt</span>';
   $('nextRow').classList.add('show');
   $('nextBtn').textContent = session.idx + 1 >= session.qs.length ? '結果を見る' : '次の問題 →';
   $('bar').style.width = ((session.idx + 1) / session.qs.length * 100) + '%';

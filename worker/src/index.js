@@ -355,7 +355,7 @@ async function handle(request, env) {
       const tot = await getTotals(env, u);
       const power = await getPower(env, sess.email, { correct: tot.correct + c01, total: tot.total + 1 });
       const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
-      const earned = (b.correct ? 10 : 0) + combo;
+      const earned = (b.correct ? 10 : -3) + combo;
       try {
         await env.DB.batch([
           env.DB.prepare(
