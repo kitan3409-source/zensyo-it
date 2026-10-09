@@ -182,7 +182,7 @@ async function load() {
       <td>${s.power || 100}</td>
       <td>${s.streak || 0}日</td>
       <td>${fmtTime(s.last_ts)}</td>
-      <td>${s.suspect ? '<span style="color:var(--bad)">連打疑い</span> ' : ''}<button class="pinBtn" data-sid="${esc(String(s.student).split(' ')[0])}">PIN解除</button> <button class="delBtn" data-sid="${esc(String(s.student).split(' ')[0])}">削除</button></td>
+      <td>${s.suspect ? '<span style="color:var(--bad)">連打疑い</span> ' : ''}<button class="pinBtn" data-sid="${esc(String(s.student).split(' ')[0])}">PIN解除</button> <button class="rsBtn" data-sid="${esc(String(s.student).split(' ')[0])}">スコア0</button> <button class="delBtn" data-sid="${esc(String(s.student).split(' ')[0])}">削除</button></td>
     </tr>`).join('');
 
   if (d.boss) {
@@ -217,6 +217,17 @@ async function load() {
       if (!confirm(`ID「${b.dataset.sid}」の全データを削除しますか？
 （回答・ポイント・装備・PIN すべて消えます。取り消し不可）`)) return;
       const r = await fetch('/api/user_reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pw, sid: b.dataset.sid })
+      });
+      if (r.ok) load(); else b.textContent = '失敗';
+    };
+  }
+  for (const b of document.querySelectorAll('.rsBtn')) {
+    b.onclick = async () => {
+      if (!confirm(`ID「${b.dataset.sid}」のスコアをリセットしますか？
+（ポイント・正解数・連勝・装備・実績・ボス貢献がゼロに。PINとログインはそのまま）`)) return;
+      const r = await fetch('/api/score_reset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pw, sid: b.dataset.sid })
       });

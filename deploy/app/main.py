@@ -962,6 +962,36 @@ def post_user_reset(p: PinResetIn):
     return {"ok": True}
 
 
+@app.post("/api/score_reset")
+def post_score_reset(p: PinResetIn):
+    conn = get_db()
+    if not pw_matches(conn, p.pw):
+        conn.close()
+        raise HTTPException(403, "forbidden")
+    sid = p.sid[:24]
+    for t in ("inventory", "equipped", "missions", "achievements", "boss_damage", "user_extras"):
+        try:
+            conn.execute(f"DELETE FROM {t} WHERE email=?", (sid,))
+        except sqlite3.OperationalError:
+            pass
+    try:
+        conn.execute(
+            "UPDATE users SET points=0, answered_total=0, correct_total=0, "
+            "login_streak=0, best_streak=0, last_activity=0, gacha_count=0 WHERE email=?",
+            (sid,),
+        )
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("DELETE FROM answers WHERE student LIKE ?", (sid + " %",))
+        conn.execute("DELETE FROM daily_stats WHERE student LIKE ?", (sid + " %",))
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 @app.post("/api/reset")
 def post_reset(p: ResetIn):
     conn = get_db()
