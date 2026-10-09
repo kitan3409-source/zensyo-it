@@ -35,11 +35,11 @@ export async function onRequestGet({ request, env }) {
       points: u.points,
       streak: u.login_streak || 0,
       total: t.total,
-      weekly: weekMap[id] || 0,
+      weekly: Math.round((weekMap[id] || 0) * adj * adj),
       rank: rankOf(t.total),
       acc: Math.round(adj * 1000) / 10,
       raw_acc: t.total ? Math.round((t.correct / t.total) * 1000) / 10 : 0,
-      score: Math.round(power * adj),
+      score: Math.round(power * adj * adj),
     });
   }
   return json({

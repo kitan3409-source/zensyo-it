@@ -823,11 +823,11 @@ def get_ranking(token: str = ""):
         lst.append({"id": sid, "name": n or "",
                     "power": power, "points": p, "streak": st or 0, "best_streak": bs or 0,
                     "total": t["total"],
-                    "weekly": week_map.get(sid, 0),
+                    "weekly": round(week_map.get(sid, 0) * adj * adj),
                     "rank": rank_of(t["total"]),
                     "acc": round(adj * 100, 1),
                     "raw_acc": round(t["correct"] / t["total"] * 100, 1) if t["total"] else 0,
-                    "score": round(power * adj)})
+                    "score": round(power * adj * adj)})
     conn.close()
     return {
         "overall": sorted(lst, key=lambda x: -x["score"])[:30],
