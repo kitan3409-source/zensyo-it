@@ -10,7 +10,7 @@ export async function onRequestPost({ request, env }) {
   const sess = await verifySession(env, b.token);
   if (!sess) return json({ error: "ログインしてください" }, 401);
   const u = await getUser(env, sess.email, sess.name);
-  const COST = 100;
+  const COST = 80;
   if ((u.points || 0) < COST) return json({ error: `ポイントが足りません（${COST}pt必要）` }, 400);
   const roll = Math.random();
   const rarity = roll < 0.6 ? "N" : roll < 0.9 ? "R" : roll < 0.99 ? "SR" : "SSR";

@@ -136,13 +136,13 @@
   .ach.on .ad { color: var(--on-primary-container); }
   .regionRow { display: flex; justify-content: space-between; align-items: center; padding: 7px 4px; font-size: 0.82rem; border-bottom: 1px solid var(--outline-var); }
   .regionRow:last-child { border-bottom: none; }
-  .regionRow .st { font-size: 0.75rem; color: var(--on-surface-var); }
+  .regionRow .st { font-size: 0.78rem; color: var(--primary); font-weight: 600; }
   .regionRow .st.clr { color: var(--good); font-weight: 800; }
   .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .tabs button { background: var(--surface-c-high); color: var(--on-surface-var); border: none; border-radius: 999px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; font-family: inherit; cursor: pointer; }
   .tabs button.on { background: var(--primary); color: var(--on-primary); }
   input[type=text]:focus, select:focus { outline: none; border-color: var(--primary); }
-  .btn {
+  .btn { touch-action: manipulation;
     background: var(--primary);
     color: var(--on-primary);
     border: none;
@@ -263,7 +263,7 @@
         <button class="btn" id="loginBtn" style="margin-top:0;padding:10px 18px">ログイン</button>
       </div>
       <div id="signedIn" style="display:none">ログイン中: <b id="who"></b><a href="#" id="logoutLink">切替</a></div>
-      <div id="loginHint">← 初回はPINを決めて登録、2回目以降はそのPINでログイン</div>
+      <div id="loginHint">← 初回はPINを決めて登録、2回目以降はそのPINでログイン<br>PINを忘れたら先生に「PINリセット」をお願いしてね</div>
       <div style="margin-top:10px">
         <button class="btn" id="tsToggle" style="font-size:12px;padding:7px 14px">別の問題セットを使う（他教科対応）</button>
         <div id="tsPanel" style="display:none;margin-top:10px;text-align:left">
@@ -322,7 +322,7 @@
   </div>
 
   <div class="card gameArea" id="gachaCard">
-    <h2>ガチャ <span class="sub">1回 100pt — N60% R30% SR9% SSR1%</span></h2>
+    <h2>ガチャ <span class="sub">1回 80pt — N60% R30% SR9% SSR1%</span></h2>
     <button class="btn gachaBtn" id="gachaBtn">ガチャをまわす</button>
     <div id="gachaResult"></div>
   </div>
@@ -356,7 +356,7 @@
       <button data-t="power">つよさ</button>
       <button data-t="weekly">今週のpt</button>
       <button data-t="rank">ランク</button>
-      <button data-t="streak">連続ログイン</button>
+      <button data-t="streak">最長連撃</button>
     </div>
     <div id="rankList"></div>
   </div>
@@ -521,7 +521,7 @@ const RANK_FMT = {
   power: (r) => `つよさ ${r.power}`,
   rank: (r) => `ランク${r.rank}（${r.total}問）`,
   weekly: (r) => `今週 +${r.weekly}pt`,
-  streak: (r) => `${r.streak}日連続`,
+  streak: (r) => `連続正解 ${r.best_streak}問`,
 };
 
 function renderRank() {
@@ -773,14 +773,17 @@ async function answer(i) {
       return;
     }
     if (ad) {
-      if (me) { me.points = ad.points; $('pointVal').textContent = ad.points; }
+      if (me) {
+        me.points = ad.points; $('pointVal').textContent = ad.points;
+        if (ad.level != null) { me.level = ad.level; $('levelVal').textContent = ad.level; }
+        if (ad.correct_total != null) me.correct_total = ad.correct_total;
+      }
       const notes = [];
       if (ad.combo) notes.push(`連撃ボーナス +${ad.combo}pt`);
       if (ad.missions_done && ad.missions_done.length) notes.push('ミッション達成: ' + ad.missions_done.map(m => m.desc + ` +${m.bonus}pt`).join('、'));
       if (ad.ach_new && ad.ach_new.length) notes.push('実績解除: ' + ad.ach_new.map(a => a.name + ` +${a.bonus}pt`).join('、'));
       if (ad.rank_up) notes.push(`ランクアップ！ ${ad.rank_up}（${RANK_TITLE[ad.rank_up] || ''}）`);
       if (ad.level_up) notes.push(`レベルアップ！ Lv${ad.level_up}（基礎攻撃力+10）`);
-      if (ad.level !== undefined && me) { me.level = ad.level; me.correct_total = ad.correct_total; $('levelVal').textContent = ad.level; }
       if (ad.boss) notes.push(ad.boss.killed ? `ボス「${ad.boss.name}」討伐！ 貢献報酬+${ad.boss.reward || 200}pt` : `ボスに${ad.boss.dmg}ダメージ`);
       if (notes.length) fb.innerHTML += ' <b>' + notes.map(esc).join(' / ') + '</b>';
       const big = ad.level_up || ad.rank_up || (ad.ach_new && ad.ach_new.length) ||
@@ -808,6 +811,10 @@ function next() {
     const pct = Math.round(session.correct / session.qs.length * 100);
     $('scoreNum').textContent = pct;
     $('scoreDetail').textContent = `${session.qs.length}問中 ${session.correct}問正解`;
+    $('scoreCard').classList.remove('pop-in');
+    void $('scoreCard').offsetWidth;
+    $('scoreCard').classList.add('pop-in');
+    $('scoreCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
     showQuestion();
   }

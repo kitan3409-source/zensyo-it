@@ -6,7 +6,7 @@ export async function onRequestGet({ request, env }) {
   if (!sess) return json({ error: "ログインしてください" }, 401);
   await ensureGameTables(env);
   const users = await env.DB.prepare(
-    "SELECT email, name, points, login_streak, answered_total, correct_total FROM users"
+    "SELECT email, name, points, login_streak, best_streak, answered_total, correct_total FROM users"
   ).all();
   const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
   const all = allItems();

@@ -57,7 +57,7 @@ export async function onRequestPost({ request, env }) {
     if (m3) doneM.push(m3);
   }
   let bossRes = null;
-  if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
+  if (b.correct) bossRes = await damageBoss(env, sess.email, 5 + Math.floor(power / 20));
   const total = tot.total + 1;
   const correctTotal = tot.correct + c01;
   const level = levelOf(correctTotal);

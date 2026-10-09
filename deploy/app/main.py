@@ -648,7 +648,7 @@ def post_answer(a: AnswerIn):
         m = bump_mission(conn, sess["email"], key, val, additive)
         if m:
             done.append(m)
-    boss_res = damage_boss(conn, sess["email"], 1 + power // 80) if a.correct else None
+    boss_res = damage_boss(conn, sess["email"], 5 + power // 20) if a.correct else None
     total = tot["total"] + 1
     correct_total = tot["correct"] + c01
     level = level_of(correct_total)
@@ -803,7 +803,7 @@ def get_ranking(token: str = ""):
     if not sess:
         conn.close()
         raise HTTPException(401, "ログインしてください")
-    users = conn.execute("SELECT email, name, points, login_streak, answered_total, correct_total FROM users").fetchall()
+    users = conn.execute("SELECT email, name, points, login_streak, best_streak, answered_total, correct_total FROM users").fetchall()
     eqs = conn.execute("SELECT email, item FROM equipped").fetchall()
     eq_p = {}
     for e, it in eqs:
@@ -815,13 +815,13 @@ def get_ranking(token: str = ""):
     ):
         week_map[s] = (sc or 0) * 10
     lst = []
-    for e, n, p, st, at, ct in users:
+    for e, n, p, st, bs, at, ct in users:
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
         sid = e.split("@")[0]
         power = base_power(level_of(t["correct"])) + eq_p.get(e, 0)
         adj = (t["correct"] + 12) / (t["total"] + 20)
         lst.append({"id": sid, "name": n or "",
-                    "power": power, "points": p, "streak": st or 0,
+                    "power": power, "points": p, "streak": st or 0, "best_streak": bs or 0,
                     "total": t["total"],
                     "weekly": week_map.get(sid, 0),
                     "rank": rank_of(t["total"]),
@@ -831,11 +831,11 @@ def get_ranking(token: str = ""):
     conn.close()
     return {
         "overall": sorted(lst, key=lambda x: -x["score"])[:30],
-        "acc": sorted(lst, key=lambda x: (-x["acc"], -x["total"]))[:30],
+        "acc": sorted([x for x in lst if x["total"] >= 10], key=lambda x: (-x["acc"], -x["total"]))[:30],
         "power": sorted(lst, key=lambda x: (-x["power"], -x["points"]))[:30],
         "weekly": sorted(lst, key=lambda x: -x["weekly"])[:30],
         "rank": sorted(lst, key=lambda x: -x["total"])[:30],
-        "streak": sorted(lst, key=lambda x: -x["streak"])[:30],
+        "streak": sorted(lst, key=lambda x: -x["best_streak"])[:30],
         "me": sess["email"].split("@")[0],
     }
 
@@ -852,7 +852,7 @@ def post_gacha(g: GachaIn):
         conn.close()
         raise HTTPException(401, "ログインしてください")
     u = get_user(conn, sess["email"], sess["name"])
-    COST = 100
+    COST = 80
     if u["points"] < COST:
         conn.close()
         raise HTTPException(400, f"ポイントが足りません（{COST}pt必要）")

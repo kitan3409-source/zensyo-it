@@ -183,7 +183,7 @@ async function handle(request, env) {
       const sess = await verifySession(env, b.token);
       if (!sess) return json({ error: "ログインしてください" }, 401);
       const u = await getUser(env, sess.email, sess.name);
-      const COST = 100;
+      const COST = 80;
       if ((u.points || 0) < COST) return json({ error: `ポイントが足りません（${COST}pt必要）` }, 400);
       const roll = Math.random();
       const rarity = roll < 0.6 ? "N" : roll < 0.9 ? "R" : roll < 0.99 ? "SR" : "SSR";
@@ -283,6 +283,7 @@ async function handle(request, env) {
           power,
           points: u.points,
           streak: u.login_streak || 0,
+          best_streak: u.best_streak || 0,
           total: t.total,
           weekly: weekMap[id] || 0,
           rank: rankOf(t.total),
@@ -293,11 +294,11 @@ async function handle(request, env) {
       }
       return json({
         overall: [...list].sort((a, b) => b.score - a.score).slice(0, 30),
-        acc: [...list].sort((a, b) => b.acc - a.acc || b.total - a.total).slice(0, 30),
+        acc: [...list].filter((r) => r.total >= 10).sort((a, b) => b.acc - a.acc || b.total - a.total).slice(0, 30),
         power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
         weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
         rank: [...list].sort((a, b) => b.total - a.total).slice(0, 30),
-        streak: [...list].sort((a, b) => b.streak - a.streak).slice(0, 30),
+        streak: [...list].sort((a, b) => b.best_streak - a.best_streak).slice(0, 30),
         me: sess.email.split("@")[0],
       });
     }
@@ -357,7 +358,7 @@ async function handle(request, env) {
         if (m3) doneM.push(m3);
       }
       let bossRes = null;
-      if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
+      if (b.correct) bossRes = await damageBoss(env, sess.email, 5 + Math.floor(power / 20));
       const total = tot.total + 1;
       const correctTotal = tot.correct + c01;
       const level = levelOf(correctTotal);
@@ -501,6 +502,7 @@ async function handle(request, env) {
             level: levelOf(c),
             rank: rankOf(a),
             streak: u.login_streak || 0,
+          best_streak: u.best_streak || 0,
             last_ts: u.last_activity || 0,
             recent_rate: u.acc_ema >= 0 ? Math.round(u.acc_ema * 1000) / 10 : null,
             suspect: a >= 15 && u.acc_ema != null && u.acc_ema >= 0 && u.acc_ema < 0.35,
