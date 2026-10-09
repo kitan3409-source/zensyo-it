@@ -437,6 +437,31 @@ async function handle(request, env) {
       return json({ ok: true });
     }
 
+    if (url.pathname === "/api/diag") {
+      if (!(await pwMatches(env, url.searchParams.get("pw") || ""))) return json({ error: "forbidden" }, 403);
+      const out = {};
+      for (const [name, sql] of [
+        ["create_users", "CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY)"],
+        ["sel_users", "SELECT email FROM users LIMIT 1"],
+        ["sel_answers", "SELECT id FROM answers LIMIT 1"],
+        ["sel_pins", "SELECT email FROM pins LIMIT 1"],
+        ["sel_boss", "SELECT id FROM boss LIMIT 1"],
+        ["sel_termstats", "SELECT term FROM term_stats LIMIT 1"],
+        ["create_extras", "CREATE TABLE IF NOT EXISTS user_extras (email TEXT PRIMARY KEY, acc_ema REAL DEFAULT -1)"],
+        ["pragma_users", "SELECT name FROM pragma_table_info('users') LIMIT 40"],
+        ["pragma_boss", "SELECT name FROM pragma_table_info('boss') LIMIT 10"],
+        ["sel_settings", "SELECT key FROM settings LIMIT 1"],
+      ]) {
+        try {
+          const r = await env.DB.prepare(sql).all();
+          out[name] = { ok: true, rows: r.results.length, sample: r.results.slice(0, 3) };
+        } catch (e) {
+          out[name] = { ok: false, err: String(e.message || e) };
+        }
+      }
+      return json(out);
+    }
+
     if (url.pathname === "/api/stats") {
       if (!(await pwMatches(env, url.searchParams.get("pw") || ""))) {
         return json({ error: "forbidden" }, 403);
