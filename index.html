@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>情報処理1級 4択クイズ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -243,6 +243,83 @@
   .score .big { font-size: 3.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; animation: pop 0.5s var(--spring); }
   .score .msg { color: var(--on-surface-var); margin-bottom: 6px; }
 
+
+  /* --- M3 Expressive compliance pass --- */
+  :root {
+    --secondary: #ccc2dc;
+    --on-secondary: #332d41;
+    --secondary-container: #4a4458;
+    --on-secondary-container: #e8def8;
+    --on-tertiary: #492532;
+    --on-tertiary-container: #ffd8e4;
+    --error-container: #8c1d18;
+    --surface-dim: #141218;
+    --surface-bright: #3b383e;
+    --inverse-surface: #e6e0e9;
+    --inverse-on-surface: #322f35;
+    --inverse-primary: #6750a4;
+  }
+  body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  header h1 { font-size: 1.75rem; letter-spacing: 0.01em; }
+  .card { border-radius: 28px; }
+  .card:nth-of-type(2) { animation-delay: 0.06s; }
+  .card:nth-of-type(3) { animation-delay: 0.12s; }
+  .card:nth-of-type(4) { animation-delay: 0.18s; }
+  /* M3E wavy linear progress — sine-wave fill tiling horizontally */
+  .progress > div, .mission .mbar > div {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M0 6 Q3 1 6 6 T12 6 T18 6 T24 6' stroke='%23d0bcff' stroke-width='3.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x left center / 24px 100%;
+    animation: waveMove 1.4s linear infinite;
+    min-width: 24px;
+  }
+  .mission .mbar > div {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M0 6 Q3 1 6 6 T12 6 T18 6 T24 6' stroke='%237ddc8e' stroke-width='3.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x left center / 24px 100%;
+  }
+  /* M3 state layers: hover +8% tint, focus +12%, pressed +12% on interactive surfaces */
+  .btn { position: relative; overflow: hidden; }
+  .btn::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--on-primary); opacity: 0; transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  .btn:hover::before { opacity: 0.08; }
+  .btn:active::before { opacity: 0.12; }
+  .btn.ghost::before { background: var(--on-surface); }
+  .tabs button { position: relative; overflow: hidden; transition: background 0.2s var(--emph), transform 0.15s var(--spring); }
+  .tabs button:active { transform: scale(0.94); }
+  .shopItem .buy { position: relative; overflow: hidden; }
+  .shopItem .buy::before { content: ""; position: absolute; inset: 0; background: var(--on-primary); opacity: 0; transition: opacity 0.15s; }
+  .shopItem .buy:hover::before { opacity: 0.08; }
+  .choice { min-height: 52px; }
+  .choice:focus-visible, .btn:focus-visible, .tabs button:focus-visible {
+    outline: 3px solid var(--primary); outline-offset: 2px;
+  }
+  /* M3E emphasized entrance for feedback/score */
+  .score .big { font-size: 3.75rem; letter-spacing: 0.02em; }
+  /* --- mobile refinement --- */
+  @media (max-width: 520px) {
+    body { padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
+    .card { padding: 18px; border-radius: 24px; margin-bottom: 12px; }
+    header h1 { font-size: 1.4rem; }
+    .controls select, .controls input[type=text], .controls input[type=password] {
+      min-height: 44px; font-size: 0.95rem;
+    }
+    #manualLogin { gap: 8px; }
+    #manualLogin input, #manualLogin select { flex: 1 1 30%; }
+    #manualLogin .btn { flex: 1 1 100%; min-height: 48px; }
+    .btn { min-height: 48px; }
+    .choice { padding: 16px; font-size: 1rem; min-height: 56px; }
+    .prompt { font-size: 1.05rem; }
+    .prompt.term { font-size: 1.3rem; }
+    .avatarWrap { width: 170px; height: 170px; }
+    .achGrid { grid-template-columns: 1fr; }
+    .tabs { gap: 8px; }
+    .tabs button { min-height: 40px; padding: 8px 16px; font-size: 0.85rem; }
+    .gachaBtn { min-height: 56px; font-size: 1.05rem; }
+    .stats { flex-wrap: wrap; gap: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01s !important; transition-duration: 0.01s !important; }
+  }
 </style>
 </head>
 <body>
