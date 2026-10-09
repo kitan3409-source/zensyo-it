@@ -31,5 +31,5 @@ export async function onRequestPost({ request, env }) {
   await grantAch(env, sess.email, "fulleq", (ec && ec.c) >= SLOTS.length);
   const u = await getUser(env, sess.email, sess.name);
   const t = await getTotals(env, u);
-  return json({ ok: true, power: await getPower(env, sess.email, t.correct) });
+  return json({ ok: true, power: await getPower(env, sess.email, t) });
 }

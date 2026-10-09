@@ -370,12 +370,17 @@ def get_totals(conn: sqlite3.Connection, u: dict) -> dict:
     return {"total": total, "correct": correct}
 
 
-def get_power(conn: sqlite3.Connection, email: str, correct: int) -> int:
-    p = base_power(level_of(correct))
+def eff_factor(adj: float) -> float:
+    return min(1.0, adj / 0.5)
+
+
+def get_power(conn: sqlite3.Connection, email: str, tot: dict) -> int:
+    p = base_power(level_of(tot["correct"]))
     for (it,) in conn.execute("SELECT item FROM equipped WHERE email=?", (email,)):
         if it in ALL_ITEMS:
             p += ALL_ITEMS[it]["power"]
-    return p
+    adj = (tot["correct"] + 12) / (tot["total"] + 20)
+    return round(p * eff_factor(adj))
 
 
 def grant_ach(conn: sqlite3.Connection, email: str, key: str, cond: bool):
@@ -613,7 +618,7 @@ def post_answer(a: AnswerIn):
     c01 = 1 if a.correct else 0
     streak = (u["cur_streak"] or 0) + 1 if a.correct else 0
     tot = get_totals(conn, u)
-    power = get_power(conn, sess["email"], tot["correct"] + c01)
+    power = get_power(conn, sess["email"], {"correct": tot["correct"] + c01, "total": tot["total"] + 1})
     combo = min(streak * 2, 20) if a.correct and streak >= 3 else 0
     earned = (10 if a.correct else 0) + combo
     conn.execute(
@@ -710,7 +715,7 @@ def get_me(token: str = ""):
     total = tot["total"]
     correct = tot["correct"]
     level = level_of(correct)
-    power = get_power(conn, sess["email"], correct)
+    power = get_power(conn, sess["email"], tot)
     regions = get_regions(conn, sess["email"])
     boss = get_boss(conn, sess["email"])
     streak = u["login_streak"] or 0
@@ -791,7 +796,7 @@ def post_equip(e: EquipIn):
     conn.commit()
     u = get_user(conn, sess["email"], sess["name"])
     t = get_totals(conn, u)
-    power = get_power(conn, sess["email"], t["correct"])
+    power = get_power(conn, sess["email"], t)
     conn.close()
     return {"ok": True, "power": power}
 
@@ -818,23 +823,25 @@ def get_ranking(token: str = ""):
     for e, n, p, st, bs, at, ct in users:
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
         sid = e.split("@")[0]
-        power = base_power(level_of(t["correct"])) + eq_p.get(e, 0)
         adj = (t["correct"] + 12) / (t["total"] + 20)
+        eff = eff_factor(adj)
+        power = round((base_power(level_of(t["correct"])) + eq_p.get(e, 0)) * eff)
         lst.append({"id": sid, "name": n or "",
                     "power": power, "points": p, "streak": st or 0, "best_streak": bs or 0,
                     "total": t["total"],
-                    "weekly": round(week_map.get(sid, 0) * adj * adj),
+                    "weekly": round(week_map.get(sid, 0) * adj * eff),
+                    "xp": round(t["total"] * adj * adj),
                     "rank": rank_of(t["total"]),
                     "acc": round(adj * 100, 1),
                     "raw_acc": round(t["correct"] / t["total"] * 100, 1) if t["total"] else 0,
-                    "score": round(power * adj * adj)})
+                    "score": round(power * adj)})
     conn.close()
     return {
         "overall": sorted(lst, key=lambda x: -x["score"])[:30],
         "acc": sorted([x for x in lst if x["total"] >= 10], key=lambda x: (-x["acc"], -x["total"]))[:30],
         "power": sorted(lst, key=lambda x: (-x["power"], -x["points"]))[:30],
         "weekly": sorted(lst, key=lambda x: -x["weekly"])[:30],
-        "rank": sorted(lst, key=lambda x: -x["total"])[:30],
+        "rank": sorted(lst, key=lambda x: -x["xp"])[:30],
         "streak": sorted(lst, key=lambda x: -x["best_streak"])[:30],
         "me": sess["email"].split("@")[0],
     }
@@ -1007,8 +1014,8 @@ def get_stats(pw: str = ""):
         if it in ALL_ITEMS:
             eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
     students = []
-    for e, n, p, st, at, ct, la, ema in conn.execute(
-        "SELECT u.email, u.name, u.points, u.login_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema "
+    for e, n, p, st, bs, at, ct, la, ema in conn.execute(
+        "SELECT u.email, u.name, u.points, u.login_streak, u.best_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema "
         "FROM users u LEFT JOIN user_extras x ON x.email=u.email"
     ):
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
@@ -1019,10 +1026,11 @@ def get_stats(pw: str = ""):
             "correct": c,
             "rate": round(c / a * 100, 1) if a else 0,
             "points": p or 0,
-            "power": base_power(level_of(c)) + eq_p.get(e, 0),
+            "power": round((base_power(level_of(c)) + eq_p.get(e, 0)) * eff_factor((c + 12) / (a + 20))),
             "level": level_of(c),
             "rank": rank_of(a),
             "streak": st or 0,
+            "best_streak": bs or 0,
             "last_ts": la or 0,
             "recent_rate": round(ema * 100, 1) if ema is not None and ema >= 0 else None,
             "suspect": bool(a >= 15 and ema is not None and 0 <= ema < 0.35),

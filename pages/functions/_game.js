@@ -281,12 +281,17 @@ export async function getTotals(env, u) {
   return { total, correct };
 }
 
-export async function getPower(env, email, correct) {
+export function effFactor(adj) {
+  return Math.min(1, adj / 0.5);
+}
+
+export async function getPower(env, email, tot) {
   const all = allItems();
   const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
-  let p = basePower(levelOf(correct));
+  let p = basePower(levelOf(tot.correct));
   for (const r of rows.results) if (all[r.item]) p += all[r.item].power;
-  return p;
+  const adj = (tot.correct + 12) / (tot.total + 20);
+  return Math.round(p * effFactor(adj));
 }
 
 export async function bumpMission(env, email, key, val, additive) {

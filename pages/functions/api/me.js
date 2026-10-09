@@ -36,7 +36,7 @@ export async function onRequestGet({ request, env }) {
   return json({
     display: `${sess.email.split("@")[0]} ${sess.name}`,
     points: u.points,
-    power: await getPower(env, sess.email, correct),
+    power: await getPower(env, sess.email, tot),
     base_power: basePower(level),
     total,
     correct_total: correct,

@@ -143,7 +143,7 @@ async function handle(request, env) {
       const total = tot.total;
       const correct = tot.correct;
       const level = levelOf(correct);
-      const power = await getPower(env, sess.email, correct);
+      const power = await getPower(env, sess.email, tot);
       return json({
         display: `${sess.email.split("@")[0]} ${sess.name}`,
         points: u.points,
@@ -247,7 +247,7 @@ async function handle(request, env) {
       await grantAch(env, sess.email, "fulleq", (ec && ec.c) >= SLOTS.length);
       const ue = await getUser(env, sess.email, sess.name);
       const te = await getTotals(env, ue);
-      return json({ ok: true, power: await getPower(env, sess.email, te.correct) });
+      return json({ ok: true, power: await getPower(env, sess.email, te) });
     }
 
     if (url.pathname === "/api/ranking") {
@@ -275,8 +275,9 @@ async function handle(request, env) {
       for (const u of users.results) {
         const t = await getTotals(env, u);
         const id = u.email.split("@")[0];
-        const power = basePower(levelOf(t.correct)) + (eqP[u.email] || 0);
         const adj = (t.correct + 12) / (t.total + 20);
+        const eff = effFactor(adj);
+        const power = Math.round((basePower(levelOf(t.correct)) + (eqP[u.email] || 0)) * eff);
         list.push({
           id,
           name: u.name || "",
@@ -285,11 +286,12 @@ async function handle(request, env) {
           streak: u.login_streak || 0,
           best_streak: u.best_streak || 0,
           total: t.total,
-          weekly: Math.round((weekMap[id] || 0) * adj * adj),
+          weekly: Math.round((weekMap[id] || 0) * adj * eff),
           rank: rankOf(t.total),
+          xp: Math.round(t.total * adj * adj),
           acc: Math.round(adj * 1000) / 10,
           raw_acc: t.total ? Math.round((t.correct / t.total) * 1000) / 10 : 0,
-          score: Math.round(power * adj * adj),
+          score: Math.round(power * adj),
         });
       }
       return json({
@@ -297,7 +299,7 @@ async function handle(request, env) {
         acc: [...list].filter((r) => r.total >= 10).sort((a, b) => b.acc - a.acc || b.total - a.total).slice(0, 30),
         power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
         weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
-        rank: [...list].sort((a, b) => b.total - a.total).slice(0, 30),
+        rank: [...list].sort((a, b) => b.xp - a.xp).slice(0, 30),
         streak: [...list].sort((a, b) => b.best_streak - a.best_streak).slice(0, 30),
         me: sess.email.split("@")[0],
       });
@@ -319,7 +321,7 @@ async function handle(request, env) {
       const term = String(b.term || "").slice(0, 200);
       const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
       const tot = await getTotals(env, u);
-      const power = await getPower(env, sess.email, tot.correct + c01);
+      const power = await getPower(env, sess.email, { correct: tot.correct + c01, total: tot.total + 1 });
       const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
       const earned = (b.correct ? 10 : 0) + combo;
       try {
@@ -498,7 +500,7 @@ async function handle(request, env) {
             correct: c,
             rate: a ? Math.round((c / a) * 1000) / 10 : 0,
             points: u.points || 0,
-            power: basePower(levelOf(c)) + (eqP[u.email] || 0),
+            power: Math.round((basePower(levelOf(c)) + (eqP[u.email] || 0)) * effFactor((c + 12) / (a + 20))),
             level: levelOf(c),
             rank: rankOf(a),
             streak: u.login_streak || 0,
@@ -819,12 +821,17 @@ async function getTotals(env, u) {
   return { total, correct };
 }
 
-async function getPower(env, email, correct) {
+function effFactor(adj) {
+  return Math.min(1, adj / 0.5);
+}
+
+async function getPower(env, email, tot) {
   const all = ALL_ITEMS;
   const rows = await env.DB.prepare("SELECT item FROM equipped WHERE email=?").bind(email).all();
-  let p = basePower(levelOf(correct));
+  let p = basePower(levelOf(tot.correct));
   for (const r of rows.results) if (all[r.item]) p += all[r.item].power;
-  return p;
+  const adj = (tot.correct + 12) / (tot.total + 20);
+  return Math.round(p * effFactor(adj));
 }
 
 async function bumpMission(env, email, key, val, additive) {

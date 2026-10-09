@@ -596,7 +596,7 @@ const RANK_FMT = {
   overall: (r) => `総合 ${r.score}（つよさ×正答率）`,
   acc: (r) => `正答率 ${r.acc}%（実測${r.raw_acc}%・${r.total}問）`,
   power: (r) => `つよさ ${r.power}`,
-  rank: (r) => `ランク${r.rank}（${r.total}問）`,
+  rank: (r) => `ランク${r.rank}（経験値${r.xp}）`,
   weekly: (r) => `今週 +${r.weekly}pt`,
   streak: (r) => `連続正解 ${r.best_streak}問`,
 };

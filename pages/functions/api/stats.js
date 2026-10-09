@@ -1,4 +1,4 @@
-import { allItems, rankOf, levelOf, basePower, getBoss, getTotals, ensureGameTables, pwMatches, json } from "../_game.js";
+import { allItems, rankOf, levelOf, basePower, effFactor, getBoss, getTotals, ensureGameTables, pwMatches, json } from "../_game.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   await ensureGameTables(env);
   try {
     const us = await env.DB.prepare(
-      "SELECT u.email, u.name, u.points, u.login_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema " +
+      "SELECT u.email, u.name, u.points, u.login_streak, u.best_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema " +
         "FROM users u LEFT JOIN user_extras x ON x.email=u.email"
     ).all();
     const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
@@ -32,10 +32,11 @@ export async function onRequestGet({ request, env }) {
         correct: c,
         rate: a ? Math.round((c / a) * 1000) / 10 : 0,
         points: u.points || 0,
-        power: basePower(levelOf(c)) + (eqP[u.email] || 0),
+        power: Math.round((basePower(levelOf(c)) + (eqP[u.email] || 0)) * effFactor((c + 12) / (a + 20))),
         level: levelOf(c),
         rank: rankOf(a),
         streak: u.login_streak || 0,
+        best_streak: u.best_streak || 0,
         last_ts: u.last_activity || 0,
         recent_rate: u.acc_ema >= 0 ? Math.round(u.acc_ema * 1000) / 10 : null,
         suspect: a >= 15 && u.acc_ema != null && u.acc_ema >= 0 && u.acc_ema < 0.35,
