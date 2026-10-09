@@ -105,7 +105,7 @@
     <div class="card">
       <h2>生徒別 回答状況（<span id="studentCount">0</span>人）</h2>
       <table>
-        <thead><tr><th>ID / 名前</th><th>ランク</th><th>Lv</th><th>回答数</th><th>正解数</th><th>正答率</th><th></th><th>pt</th><th>つよさ</th><th>連続ログイン</th><th>最終回答</th><th>PIN</th></tr></thead>
+        <thead><tr><th>ID / 名前</th><th>ランク</th><th>Lv</th><th>回答数</th><th>正解数</th><th>正答率</th><th>直近%</th><th></th><th>pt</th><th>つよさ</th><th>連続ログイン</th><th>最終回答</th><th>操作</th></tr></thead>
         <tbody id="studentRows"></tbody>
       </table>
       <div class="empty" id="noStudents">まだ回答がありません</div>
@@ -132,7 +132,7 @@
       <div class="okmsg" id="pwOk">変更しました</div>
       <button class="btn" id="pwBtn">変更</button>
     </div>
-    <div class="refreshed">10秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
+    <div class="refreshed">60秒ごとに自動更新 — 最終更新 <span id="ts">-</span></div>
   </div>
 </div>
 
@@ -176,19 +176,21 @@ async function load() {
       <td>${s.answered}</td>
       <td>${s.correct}</td>
       <td class="rate ${rateClass(s.rate)}">${s.rate}%</td>
+      <td class="rate">${s.recent_rate != null ? s.recent_rate + '%' : '-'}</td>
       <td class="bar-cell"><div class="mini"><div style="width:${s.rate}%"></div></div></td>
       <td>${s.points || 0}</td>
       <td>${s.power || 100}</td>
       <td>${s.streak || 0}日</td>
       <td>${fmtTime(s.last_ts)}</td>
-      <td><button class="pinBtn" data-sid="${esc(String(s.student).split(' ')[0])}">リセット</button></td>
+      <td>${s.suspect ? '<span style="color:var(--bad)">連打疑い</span> ' : ''}<button class="pinBtn" data-sid="${esc(String(s.student).split(' ')[0])}">PIN解除</button> <button class="delBtn" data-sid="${esc(String(s.student).split(' ')[0])}">削除</button></td>
     </tr>`).join('');
 
   if (d.boss) {
     $('bossCard').style.display = 'block';
+    const blv = d.boss.tier > 1 ? ` Lv.${d.boss.tier}` : '';
     $('bossTxt').textContent = d.boss.defeated
-      ? `${d.boss.name} — 討伐済み（参加者 ${d.boss.attackers}人）`
-      : `${d.boss.name} — 残りHP ${d.boss.hp}/${d.boss.max_hp}（参加者 ${d.boss.attackers}人）`;
+      ? `${d.boss.name}${blv} — 討伐済み（参加者 ${d.boss.attackers}人）`
+      : `${d.boss.name}${blv} — 残りHP ${d.boss.hp}/${d.boss.max_hp}（参加者 ${d.boss.attackers}人）`;
     $('bossBar').style.width = Math.round(d.boss.hp / d.boss.max_hp * 100) + '%';
   }
 
@@ -201,12 +203,24 @@ async function load() {
     </tr>`).join('');
   for (const b of document.querySelectorAll('.pinBtn')) {
     b.onclick = async () => {
-      if (!confirm(`ID「${b.dataset.sid}」のPINをリセットしますか？（生徒は再登録になります）`)) return;
+      if (!confirm(`ID「${b.dataset.sid}」のPINをリセットしますか？
+（その生徒は即ログアウトされ、再登録が必要になります）`)) return;
       const r = await fetch('/api/pin_reset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pw, sid: b.dataset.sid })
       });
       b.textContent = r.ok ? '解除済' : '失敗';
+    };
+  }
+  for (const b of document.querySelectorAll('.delBtn')) {
+    b.onclick = async () => {
+      if (!confirm(`ID「${b.dataset.sid}」の全データを削除しますか？
+（回答・ポイント・装備・PIN すべて消えます。取り消し不可）`)) return;
+      const r = await fetch('/api/user_reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pw, sid: b.dataset.sid })
+      });
+      if (r.ok) load(); else b.textContent = '失敗';
     };
   }
   $('ts').textContent = new Date().toLocaleTimeString('ja-JP');
@@ -256,7 +270,7 @@ $('resetBtn').onclick = async () => {
 };
 
 if (pw) load();
-setInterval(() => { if (pw) load(); }, 10000);
+setInterval(() => { if (pw) load(); }, 60000);
 </script>
 </body>
 </html>

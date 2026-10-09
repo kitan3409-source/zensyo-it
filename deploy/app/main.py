@@ -83,11 +83,15 @@ def get_db() -> sqlite3.Connection:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
-    for col, dft in (("answered_total", -1), ("correct_total", -1), ("last_activity", 0)):
+    for col, dft in (("answered_total", -1), ("correct_total", -1), ("last_activity", 0), ("acc_ema", -1)):
         try:
-            conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT {dft}")
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} REAL DEFAULT {dft}")
         except sqlite3.OperationalError:
             pass
+    try:
+        conn.execute("ALTER TABLE boss ADD COLUMN tier INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
     for m in (
         "UPDATE equipped SET slot='rhand' WHERE slot='weapon'",
         "UPDATE equipped SET slot='body' WHERE slot='armor'",
@@ -123,9 +127,9 @@ def get_secret(conn: sqlite3.Connection) -> str:
     return _SECRET_CACHE
 
 
-def make_token(conn: sqlite3.Connection, email: str, name: str) -> str:
+def make_token(conn: sqlite3.Connection, email: str, name: str, fp: str = "") -> str:
     exp = int((time.time() + 7 * 24 * 3600) * 1000)
-    payload = f"{email}|{name}|{exp}"
+    payload = f"{email}|{name}|{exp}|{fp}"
     sig = hmac.new(get_secret(conn).encode(), payload.encode(), hashlib.sha256).hexdigest()
     return base64.b64encode(payload.encode()).decode() + "." + sig
 
@@ -143,7 +147,16 @@ def verify_token(conn: sqlite3.Connection, token: str):
     parts = payload.split("|")
     if len(parts) < 3 or float(parts[2]) < time.time() * 1000:
         return None
-    return {"email": parts[0], "name": parts[1]}
+    email = parts[0]
+    if email and "@" not in email:
+        fp = parts[3] if len(parts) > 3 else ""
+        try:
+            pr = conn.execute("SELECT pin FROM pins WHERE email=?", (email,)).fetchone()
+        except sqlite3.OperationalError:
+            return None
+        if not pr or str(pr[0])[:12] != fp:
+            return None
+    return {"email": email, "name": parts[1]}
 
 
 SLOTS = ["head", "body", "lhand", "rhand", "pants", "feet"]
@@ -290,6 +303,7 @@ ACH = {
     "fulleq": {"name": "フル装備", "desc": "6スロットすべてに装備", "bonus": 100},
     "lv5": {"name": "レベル5", "desc": "レベル5に到達", "bonus": 150},
     "lv10": {"name": "レベル10", "desc": "レベル10に到達", "bonus": 400},
+    "sharp": {"name": "精密射撃", "desc": "30問以上回答で正答率90%以上", "bonus": 120},
 }
 
 RANKS = [
@@ -307,7 +321,8 @@ BOSS_NAMES = [
     "メモリリークの巨獣", "404番目の亡霊", "暗黒SQLインジェクタ",
     "フリーズの鬼神", "文字化けモンスター",
 ]
-BOSS_HP = 2000
+def boss_hp(tier):
+    return 20000 * max(1, tier)
 
 
 def rank_of(total: int) -> str:
@@ -379,7 +394,7 @@ def get_terms_map() -> dict:
     try:
         j = json.loads((STATIC_DIR / "terms.json").read_text())
         for t in j.get("terms", j):
-            _TERMS_MAP[t["term"]] = t.get("category", "その他")
+            _TERMS_MAP[t.get("term") or t.get("q")] = t.get("category", "その他")
     except Exception:
         pass
     return _TERMS_MAP
@@ -425,9 +440,11 @@ def check_regions(conn: sqlite3.Connection, email: str):
 def get_boss(conn: sqlite3.Connection, email: str = "") -> dict:
     wk = week_key()
     b = conn.execute("SELECT * FROM boss ORDER BY id DESC LIMIT 1").fetchone()
-    if not b or b[1] != wk:
-        name = BOSS_NAMES[abs(hash(wk)) % len(BOSS_NAMES)]
-        conn.execute("INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)", (wk, name, BOSS_HP, BOSS_HP))
+    if not b or b[5]:
+        tier = ((b[6] if len(b) > 6 and b[6] else 1) + 1) if b and b[4] >= 10000 else 1
+        name = BOSS_NAMES[abs(hash(wk + "-" + str(tier))) % len(BOSS_NAMES)]
+        hp = boss_hp(tier)
+        conn.execute("INSERT INTO boss (week, name, hp, max_hp, tier) VALUES (?, ?, ?, ?, ?)", (wk, name, hp, hp, tier))
         conn.commit()
         b = conn.execute("SELECT * FROM boss ORDER BY id DESC LIMIT 1").fetchone()
     my = 0
@@ -435,27 +452,27 @@ def get_boss(conn: sqlite3.Connection, email: str = "") -> dict:
         d = conn.execute("SELECT dmg FROM boss_damage WHERE email=? AND boss_id=?", (email, b[0])).fetchone()
         my = d[0] if d else 0
     c = conn.execute("SELECT COUNT(DISTINCT email) FROM boss_damage WHERE boss_id=?", (b[0],)).fetchone()
-    return {"name": b[2], "hp": b[3], "max_hp": b[4], "defeated": bool(b[5]), "my_dmg": my, "attackers": c[0] if c else 0}
+    return {"id": b[0], "name": b[2], "hp": b[3], "max_hp": b[4], "defeated": bool(b[5]), "my_dmg": my, "attackers": c[0] if c else 0, "tier": b[6] if len(b) > 6 and b[6] else 1}
 
 
 def damage_boss(conn: sqlite3.Connection, email: str, dmg: int):
-    wk = week_key()
-    b = conn.execute("SELECT * FROM boss WHERE week=?", (wk,)).fetchone()
-    if not b or b[5]:
+    b = get_boss(conn, email)
+    if not b or b["defeated"]:
         return None
-    new_hp = max(0, b[3] - dmg)
-    conn.execute("UPDATE boss SET hp=? WHERE id=?", (new_hp, b[0]))
+    new_hp = max(0, b["hp"] - dmg)
+    conn.execute("UPDATE boss SET hp=? WHERE id=?", (new_hp, b["id"]))
     conn.execute(
         "INSERT INTO boss_damage (email, boss_id, dmg) VALUES (?, ?, ?) ON CONFLICT(email, boss_id) DO UPDATE SET dmg=dmg+excluded.dmg",
-        (email, b[0], dmg),
+        (email, b["id"], dmg),
     )
     conn.commit()
     if new_hp == 0:
-        conn.execute("UPDATE boss SET defeated=1 WHERE id=?", (b[0],))
-        for (e,) in conn.execute("SELECT email FROM boss_damage WHERE boss_id=?", (b[0],)):
-            conn.execute("UPDATE users SET points=points+200 WHERE email=?", (e,))
+        conn.execute("UPDATE boss SET defeated=1 WHERE id=?", (b["id"],))
+        reward = 150 + 50 * b["tier"]
+        for (e,) in conn.execute("SELECT email FROM boss_damage WHERE boss_id=?", (b["id"],)):
+            conn.execute("UPDATE users SET points=points+? WHERE email=?", (reward, e))
         conn.commit()
-        return {"killed": True, "name": b[2], "dmg": dmg}
+        return {"killed": True, "name": b["name"], "dmg": dmg, "reward": reward, "tier": b["tier"]}
     return {"killed": False, "dmg": dmg, "hp": new_hp}
 
 
@@ -581,31 +598,32 @@ def post_answer(a: AnswerIn):
         conn.close()
         raise HTTPException(401, "ログインしてください")
     student = f"{sess['email'].split('@')[0]} {sess['name']}"[:50]
+    u = get_user(conn, sess["email"], sess["name"])
+    now = time.time()
+    if u["last_activity"] and now - u["last_activity"] < 1.0:
+        conn.close()
+        return {"ok": False, "too_fast": True, "error": "連打ガード：少し間をあけて答えて"}
+    c01 = 1 if a.correct else 0
+    streak = (u["cur_streak"] or 0) + 1 if a.correct else 0
+    tot = get_totals(conn, u)
+    power = get_power(conn, sess["email"], tot["correct"] + c01)
+    combo = min(streak * 2, 20) if a.correct and streak >= 3 else 0
+    earned = (10 if a.correct else 0) + combo
     conn.execute(
         "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)",
-        (student, a.term[:200], a.direction[:10], int(a.correct), time.time()),
+        (student, a.term[:200], a.direction[:10], c01, now),
     )
-    c01 = 1 if a.correct else 0
     conn.execute(
         "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, "
-        "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=? WHERE email=?",
-        (c01, time.time(), sess["email"]),
+        "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=?, "
+        "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?), "
+        "acc_ema=CASE WHEN acc_ema<0 THEN ? ELSE acc_ema*0.8+? END WHERE email=?",
+        (c01, now, earned, earned, streak, streak, c01, c01 * 0.2, sess["email"]),
     )
     conn.execute(
         "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) "
         "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts",
-        (a.term[:200], c01, time.time()),
-    )
-    conn.commit()
-    u = get_user(conn, sess["email"], sess["name"])
-    streak = (u["cur_streak"] or 0) + 1 if a.correct else 0
-    tot = get_totals(conn, u)
-    power = get_power(conn, sess["email"], tot["correct"])
-    combo = min(streak * 2, 20) if a.correct and streak >= 3 else 0
-    earned = (10 if a.correct else 2) + combo
-    conn.execute(
-        "UPDATE users SET points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?",
-        (earned, earned, streak, streak, sess["email"]),
+        (a.term[:200], c01, now),
     )
     conn.commit()
     done = []
@@ -614,8 +632,8 @@ def post_answer(a: AnswerIn):
         if m:
             done.append(m)
     boss_res = damage_boss(conn, sess["email"], 1 + power // 80) if a.correct else None
-    total = tot["total"]
-    correct_total = tot["correct"]
+    total = tot["total"] + 1
+    correct_total = tot["correct"] + c01
     level = level_of(correct_total)
     level_up = level if level > level_of(correct_total - (1 if a.correct else 0)) else None
     hour = time.gmtime(time.time() + 9 * 3600).tm_hour
@@ -628,12 +646,13 @@ def post_answer(a: AnswerIn):
         ("rich", (u["lifetime"] or 0) + earned >= 1000),
         ("lv5", level >= 5), ("lv10", level >= 10),
         ("boss", bool(boss_res and boss_res.get("killed"))),
+        ("sharp", correct_total >= 30 and correct_total / total >= 0.9),
     ]:
         g = grant_ach(conn, sess["email"], k, cond)
         if g:
             new_ach.append(g)
     new_ach.extend(check_regions(conn, sess["email"]))
-    points = (u["points"] or 0) + earned + sum(x["bonus"] for x in done) + sum(x["bonus"] for x in new_ach) + (200 if boss_res and boss_res.get("killed") else 0)
+    points = (u["points"] or 0) + earned + sum(x["bonus"] for x in done) + sum(x["bonus"] for x in new_ach) + (boss_res.get("reward", 0) if boss_res and boss_res.get("killed") else 0)
     conn.close()
     return {
         "ok": True, "earned": earned, "combo": combo, "points": points,
@@ -778,18 +797,25 @@ def get_ranking(token: str = ""):
         "SELECT student, COUNT(*), SUM(correct) FROM answers WHERE ts >= ? GROUP BY student",
         (time.time() - 7 * 86400,),
     ):
-        week_map[str(s).split(" ")[0]] = (sc or 0) * 8 + c * 2
+        week_map[str(s).split(" ")[0]] = (sc or 0) * 10
     lst = []
     for e, n, p, st, at, ct in users:
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
         sid = e.split("@")[0]
+        power = base_power(level_of(t["correct"])) + eq_p.get(e, 0)
+        adj = (t["correct"] + 12) / (t["total"] + 20)
         lst.append({"id": sid, "name": n or "",
-                    "power": base_power(level_of(t["correct"])) + eq_p.get(e, 0), "points": p, "streak": st or 0,
+                    "power": power, "points": p, "streak": st or 0,
                     "total": t["total"],
                     "weekly": week_map.get(sid, 0),
-                    "rank": rank_of(t["total"])})
+                    "rank": rank_of(t["total"]),
+                    "acc": round(adj * 100, 1),
+                    "raw_acc": round(t["correct"] / t["total"] * 100, 1) if t["total"] else 0,
+                    "score": round(power * adj)})
     conn.close()
     return {
+        "overall": sorted(lst, key=lambda x: -x["score"])[:30],
+        "acc": sorted(lst, key=lambda x: (-x["acc"], -x["total"]))[:30],
         "power": sorted(lst, key=lambda x: (-x["power"], -x["points"]))[:30],
         "weekly": sorted(lst, key=lambda x: -x["weekly"])[:30],
         "rank": sorted(lst, key=lambda x: -x["total"])[:30],
@@ -865,7 +891,8 @@ def post_student_login(s: StudentLoginIn):
     else:
         conn.execute("INSERT INTO pins (email, pin) VALUES (?, ?)", (sid, h))
         conn.commit()
-    tok = make_token(conn, sid, name)
+    stored_pin = stored[0] if stored else h
+    tok = make_token(conn, sid, name, stored_pin[:12])
     conn.close()
     return {"token": tok, "display": f"{sid} {name}"}
 
@@ -889,6 +916,27 @@ def post_pin_reset(p: PinResetIn):
 
 class ResetIn(BaseModel):
     pw: str
+
+
+@app.post("/api/user_reset")
+def post_user_reset(p: PinResetIn):
+    conn = get_db()
+    if not pw_matches(conn, p.pw):
+        conn.close()
+        raise HTTPException(403, "forbidden")
+    sid = p.sid[:24]
+    for t in ("pins", "users", "inventory", "equipped", "missions", "achievements", "boss_damage"):
+        try:
+            conn.execute(f"DELETE FROM {t} WHERE email=?", (sid,))
+        except sqlite3.OperationalError:
+            pass
+    try:
+        conn.execute("DELETE FROM answers WHERE student LIKE ?", (sid + " %",))
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 @app.post("/api/reset")
@@ -943,8 +991,8 @@ def get_stats(pw: str = ""):
         if it in ALL_ITEMS:
             eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
     students = []
-    for e, n, p, st, at, ct, la in conn.execute(
-        "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
+    for e, n, p, st, at, ct, la, ema in conn.execute(
+        "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity, acc_ema FROM users"
     ):
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
         a, c = t["total"], t["correct"]
@@ -959,6 +1007,8 @@ def get_stats(pw: str = ""):
             "rank": rank_of(a),
             "streak": st or 0,
             "last_ts": la or 0,
+            "recent_rate": round(ema * 100, 1) if ema is not None and ema >= 0 else None,
+            "suspect": bool(a >= 15 and ema is not None and 0 <= ema < 0.35),
         })
     students.sort(key=lambda x: -x["last_ts"])
     terms = [

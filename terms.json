@@ -1269,6 +1269,1728 @@
       "department": "ビジネス情報",
       "category": "データベースソフトウェアに関する知識",
       "subcategory": "SQL"
+    },
+    {
+      "q": "1600×1200ピクセル・24ビットフルカラーの画像（無圧縮）のデータ量は？",
+      "answer": "約5.8MB",
+      "choices": [
+        "約2.9MB",
+        "約1.9MB",
+        "約11.5MB",
+        "約5.8MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "画像の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "800×600ピクセル・24ビットフルカラーの画像（無圧縮）のデータ量は？",
+      "answer": "約1.4MB",
+      "choices": [
+        "約0.7MB",
+        "約2.9MB",
+        "約0.5MB",
+        "約1.4MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "画像の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "640×480ピクセル・24ビットフルカラーの画像（無圧縮）のデータ量は？",
+      "answer": "約0.9MB",
+      "choices": [
+        "約0.3MB",
+        "約1.8MB",
+        "約3.7MB",
+        "約0.9MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "画像の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1024×768ピクセル・256色（8ビット）の画像（無圧縮）のデータ量は？",
+      "answer": "約0.8MB",
+      "choices": [
+        "約2.4MB",
+        "約0.3MB",
+        "約0.08MB",
+        "約0.8MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "画像の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1600×1200ピクセルの白黒2値（1ビット）画像（無圧縮）のデータ量は？",
+      "answer": "約0.3MB",
+      "choices": [
+        "約2.4MB",
+        "約0.15MB",
+        "約1.2MB",
+        "約0.3MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "画像の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "44.1kHz・16ビット・ステレオで10秒間録音した音声データ（無圧縮）は？",
+      "answer": "約1.8MB",
+      "choices": [
+        "約0.9MB",
+        "約3.5MB",
+        "約18MB",
+        "約1.8MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "音声の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "22.05kHz・8ビット・モノラルで60秒間録音した音声データ（無圧縮）は？",
+      "answer": "約1.3MB",
+      "choices": [
+        "約2.6MB",
+        "約0.7MB",
+        "約13MB",
+        "約1.3MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "音声の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "640×480ピクセル・24ビット・毎秒30コマの動画3秒分（無圧縮）のデータ量は？",
+      "answer": "約83MB",
+      "choices": [
+        "約28MB",
+        "約166MB",
+        "約8.3MB",
+        "約83MB"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "動画の容量計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "容量500GBのHDDに、1枚2MBの写真は約何枚保存できるか（1GB=1000MBとして計算）",
+      "answer": "約25万枚",
+      "choices": [
+        "約2.5万枚",
+        "約5万枚",
+        "約250万枚",
+        "約25万枚"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "記憶容量の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "700MBのCD-ROMは、1.44MBのフロッピーディスク約何枚分か",
+      "answer": "約500枚",
+      "choices": [
+        "約50枚",
+        "約5000枚",
+        "約200枚",
+        "約500枚"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "記憶容量の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "32GBのSDカードに、1枚8MBの写真は約何枚保存できるか（1GB=1000MBとして計算）",
+      "answer": "約4000枚",
+      "choices": [
+        "約400枚",
+        "約4万枚",
+        "約2000枚",
+        "約4000枚"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "記憶容量の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "通信速度100Mbpsの回線で800MBのファイルをダウンロードする理論上の時間は？",
+      "answer": "約64秒",
+      "choices": [
+        "約8秒",
+        "約640秒",
+        "約32秒",
+        "約64秒"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "転送時間の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "通信速度10Mbpsの回線で100MBのファイルをダウンロードする理論上の時間は？",
+      "answer": "約80秒",
+      "choices": [
+        "約8秒",
+        "約800秒",
+        "約10秒",
+        "約80秒"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "転送時間の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "4.7GBのDVDは、650MBのCD-ROM約何枚分か（1GB=1000MBとして計算）",
+      "answer": "約7枚",
+      "choices": [
+        "約5枚",
+        "約72枚",
+        "約10枚",
+        "約7枚"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "記憶容量の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "4GBのUSBメモリに、1個1.5MBのファイルは約何個保存できるか（1GB=1000MBとして計算）",
+      "answer": "約2600個",
+      "choices": [
+        "約260個",
+        "約2.6万個",
+        "約1300個",
+        "約2600個"
+      ],
+      "department": "共通",
+      "category": "計算問題：データ量・転送",
+      "subcategory": "記憶容量の計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "10進数の25を2進数で表すと？",
+      "answer": "11001",
+      "choices": [
+        "11010",
+        "10101",
+        "11100",
+        "11001"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "10進数の44を2進数で表すと？",
+      "answer": "101100",
+      "choices": [
+        "101010",
+        "110100",
+        "100110",
+        "101100"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "10進数の13を2進数で表すと？",
+      "answer": "1101",
+      "choices": [
+        "1110",
+        "1011",
+        "1100",
+        "1101"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の1011を10進数で表すと？",
+      "answer": "11",
+      "choices": [
+        "10",
+        "12",
+        "13",
+        "11"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の1111を10進数で表すと？",
+      "answer": "15",
+      "choices": [
+        "14",
+        "16",
+        "17",
+        "15"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の100101を10進数で表すと？",
+      "answer": "37",
+      "choices": [
+        "35",
+        "36",
+        "38",
+        "37"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の1010101を10進数で表すと？",
+      "answer": "85",
+      "choices": [
+        "83",
+        "86",
+        "87",
+        "85"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "16進数のAを10進数で表すと？",
+      "answer": "10",
+      "choices": [
+        "11",
+        "9",
+        "12",
+        "10"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "16進数の2Fを10進数で表すと？",
+      "answer": "47",
+      "choices": [
+        "45",
+        "46",
+        "31",
+        "47"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "16進数のFFを10進数で表すと？",
+      "answer": "255",
+      "choices": [
+        "256",
+        "254",
+        "511",
+        "255"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "16進数の1Aを10進数で表すと？",
+      "answer": "26",
+      "choices": [
+        "25",
+        "27",
+        "110",
+        "26"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "8進数の17を10進数で表すと？",
+      "answer": "15",
+      "choices": [
+        "17",
+        "16",
+        "23",
+        "15"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "基数変換",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の1010+0101の計算結果は？",
+      "answer": "1111",
+      "choices": [
+        "10111",
+        "1101",
+        "11011",
+        "1111"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "2進数の演算",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数の1100+1100の計算結果は？",
+      "answer": "11000",
+      "choices": [
+        "10100",
+        "11100",
+        "11010",
+        "11000"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "2進数の演算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1バイト（8ビット）で表せる情報の種類は？",
+      "answer": "256通り",
+      "choices": [
+        "128通り",
+        "255通り",
+        "512通り",
+        "256通り"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "情報量",
+      "qtype": "choice"
+    },
+    {
+      "q": "16ビットで表せる情報の種類は？",
+      "answer": "65536通り",
+      "choices": [
+        "32768通り",
+        "65535通り",
+        "1048576通り",
+        "65536通り"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "情報量",
+      "qtype": "choice"
+    },
+    {
+      "q": "2進数を左に1ビットシフトすると値はどうなる？",
+      "answer": "2倍になる",
+      "choices": [
+        "半分になる",
+        "4倍になる",
+        "1増える",
+        "2倍になる"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "2進数の演算",
+      "qtype": "choice"
+    },
+    {
+      "q": "8ビットの2の補数で-5を表すと？",
+      "answer": "11111011",
+      "choices": [
+        "11111010",
+        "00000101",
+        "11111101",
+        "11111011"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "負数の表現",
+      "qtype": "choice"
+    },
+    {
+      "q": "ASCIIコードで英数字1文字を表すサイズは？",
+      "answer": "1バイト",
+      "choices": [
+        "2バイト",
+        "4ビット",
+        "可変長",
+        "1バイト"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "文字コード",
+      "qtype": "choice"
+    },
+    {
+      "q": "シフトJISで漢字1文字を表すサイズは？",
+      "answer": "2バイト",
+      "choices": [
+        "1バイト",
+        "4バイト",
+        "3バイト",
+        "2バイト"
+      ],
+      "department": "共通",
+      "category": "計算問題：進数・コード",
+      "subcategory": "文字コード",
+      "qtype": "choice"
+    },
+    {
+      "q": "20人日の作業を5人で行うと何日かかる？",
+      "answer": "4日",
+      "choices": [
+        "10日",
+        "5日",
+        "100日",
+        "4日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "30人日の作業を6人で行うと何日かかる？",
+      "answer": "5日",
+      "choices": [
+        "6日",
+        "36日",
+        "180日",
+        "5日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "10人月のプロジェクトを5人で担当すると何か月かかる？",
+      "answer": "2か月",
+      "choices": [
+        "5か月",
+        "15か月",
+        "50か月",
+        "2か月"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1人月を20人日とすると、5人月は何人日？",
+      "answer": "100人日",
+      "choices": [
+        "25人日",
+        "4人日",
+        "200人日",
+        "100人日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "設計60人日＋開発120人日のプロジェクトを6人で行うと何日？",
+      "answer": "30日",
+      "choices": [
+        "20日",
+        "180日",
+        "36日",
+        "30日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "残り工数80人日、納期まで10日。必要な人数は？",
+      "answer": "8人",
+      "choices": [
+        "4人",
+        "10人",
+        "80人",
+        "8人"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "全体200人日のプロジェクトで120人日が完了。進捗率は？",
+      "answer": "60%",
+      "choices": [
+        "40%",
+        "120%",
+        "80%",
+        "60%"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "進捗管理",
+      "qtype": "choice"
+    },
+    {
+      "q": "全体400人日のプロジェクトでテスト工数が30%。テスト工数は？",
+      "answer": "120人日",
+      "choices": [
+        "30人日",
+        "133人日",
+        "70人日",
+        "120人日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1人日=8時間のとき、15人日は何時間？",
+      "answer": "120時間",
+      "choices": [
+        "23時間",
+        "150時間",
+        "96時間",
+        "120時間"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "10人で5日かかる作業（50人日）を2人で行うと何日？",
+      "answer": "25日",
+      "choices": [
+        "10日",
+        "5日",
+        "50日",
+        "25日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1000本のテストを1人1日40本・5人で実施すると何日？",
+      "answer": "5日",
+      "choices": [
+        "8日",
+        "25日",
+        "200日",
+        "5日"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "1人日あたり500ステップ作れるとき、10人日の生産量は？",
+      "answer": "5000ステップ",
+      "choices": [
+        "500ステップ",
+        "50ステップ",
+        "510ステップ",
+        "5000ステップ"
+      ],
+      "department": "ビジネス情報",
+      "category": "計算問題：工数・開発",
+      "subcategory": "工数計算",
+      "qtype": "choice"
+    },
+    {
+      "q": "ExcelでA1〜A10の合計を求める式は？",
+      "answer": "=SUM(A1:A10)",
+      "choices": [
+        "=AVERAGE(A1:A10)",
+        "=TOTAL(A1:A10)",
+        "=ADD(A1:A10)",
+        "=SUM(A1:A10)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学）",
+      "qtype": "choice"
+    },
+    {
+      "q": "ExcelでB1〜B20の平均を求める式は？",
+      "answer": "=AVERAGE(B1:B20)",
+      "choices": [
+        "=SUM(B1:B20)",
+        "=MEAN(B1:B20)",
+        "=MID(B1:B20)",
+        "=AVERAGE(B1:B20)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "ExcelでC1〜C30の最大値を求める式は？",
+      "answer": "=MAX(C1:C30)",
+      "choices": [
+        "=MIN(C1:C30)",
+        "=TOP(C1:C30)",
+        "=LARGE(C1:C30)",
+        "=MAX(C1:C30)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "ExcelでC1〜C30の最小値を求める式は？",
+      "answer": "=MIN(C1:C30)",
+      "choices": [
+        "=MAX(C1:C30)",
+        "=LOW(C1:C30)",
+        "=SMALL(C1:C30)",
+        "=MIN(C1:C30)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelで数値が入力されたセルの個数を数える関数は？",
+      "answer": "COUNT",
+      "choices": [
+        "COUNTA",
+        "COUNTIF",
+        "SUM",
+        "COUNT"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelで空でないセルの個数を数える関数は？",
+      "answer": "COUNTA",
+      "choices": [
+        "COUNT",
+        "COUNTBLANK",
+        "SUM",
+        "COUNTA"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "ExcelでA1〜A50のうち60以上のセル数を数える式は？",
+      "answer": "=COUNTIF(A1:A50,\">=60\")",
+      "choices": [
+        "=COUNT(A1:A50,\">=60\")",
+        "=SUMIF(A1:A50,\">=60\")",
+        "=IF(A1:A50>=60)",
+        "=COUNTIF(A1:A50,\">=60\")"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "=IF(B2>=60,\"合格\",\"不合格\") でB2が75のときの結果は？",
+      "answer": "合格",
+      "choices": [
+        "不合格",
+        "75",
+        "エラー",
+        "合格"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（論理）",
+      "qtype": "choice"
+    },
+    {
+      "q": "=IF(B2>=60,\"合格\",\"不合格\") でB2が40のときの結果は？",
+      "answer": "不合格",
+      "choices": [
+        "合格",
+        "40",
+        "エラー",
+        "不合格"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（論理）",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelの $A$1 のような参照方法を何という？",
+      "answer": "絶対参照",
+      "choices": [
+        "相対参照",
+        "複合参照",
+        "循環参照",
+        "絶対参照"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "参照方式",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelの A$1 はコピーすると何が固定される？",
+      "answer": "行番号",
+      "choices": [
+        "列名",
+        "行列とも",
+        "何も固定されない",
+        "行番号"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "参照方式",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelで =A1*B1 を1行下のセルにコピーするとどうなる？",
+      "answer": "=A2*B2",
+      "choices": [
+        "=A1*B1のまま",
+        "=A2*B1",
+        "=B2*C2",
+        "=A2*B2"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "参照方式",
+      "qtype": "choice"
+    },
+    {
+      "q": "商品表のA〜C列からB2のコードで検索し3列目の価格を返す式は？",
+      "answer": "=VLOOKUP(B2,商品表!A:C,3,FALSE)",
+      "choices": [
+        "=HLOOKUP(B2,商品表!A:C,3)",
+        "=SEARCH(B2,商品表!A:C)",
+        "=FIND(B2,商品表!A:C,3)",
+        "=VLOOKUP(B2,商品表!A:C,3,FALSE)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（検索/行列）",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelで今日の日付を返す関数は？",
+      "answer": "=TODAY()",
+      "choices": [
+        "=NOW()",
+        "=DATE()",
+        "=DAY()",
+        "=TODAY()"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（日付）",
+      "qtype": "choice"
+    },
+    {
+      "q": "=ROUND(12.345, 2) の結果は？",
+      "answer": "12.35",
+      "choices": [
+        "12.34",
+        "12.3",
+        "13",
+        "12.35"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学）",
+      "qtype": "choice"
+    },
+    {
+      "q": "=ROUNDUP(12.31, 0) の結果は？",
+      "answer": "13",
+      "choices": [
+        "12",
+        "12.3",
+        "12.31",
+        "13"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学）",
+      "qtype": "choice"
+    },
+    {
+      "q": "=ROUNDDOWN(12.99, 0) の結果は？",
+      "answer": "12",
+      "choices": [
+        "13",
+        "12.9",
+        "12.99",
+        "12"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（数学）",
+      "qtype": "choice"
+    },
+    {
+      "q": "Excelで =A1&\"様\" は何をする？",
+      "answer": "文字列を結合する",
+      "choices": [
+        "数値を加算する",
+        "コメントを付ける",
+        "エラーになる",
+        "文字列を結合する"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（文字列操作）",
+      "qtype": "choice"
+    },
+    {
+      "q": "A列が「営業」の行だけB列を合計する式は？",
+      "answer": "=SUMIF(A:A,\"営業\",B:B)",
+      "choices": [
+        "=SUM(A:A,\"営業\")",
+        "=IF(A:A=\"営業\",B:B)",
+        "=COUNTIF(A:A,\"営業\",B:B)",
+        "=SUMIF(A:A,\"営業\",B:B)"
+      ],
+      "department": "ビジネス情報",
+      "category": "表計算ソフトウェアの活用",
+      "subcategory": "関数の利用（統計）",
+      "qtype": "choice"
+    },
+    {
+      "q": "主キー（プライマリキー）の役割は？",
+      "answer": "レコードを一意に識別する",
+      "choices": [
+        "表同士を結合する",
+        "データを暗号化する",
+        "検索を高速化するだけ",
+        "レコードを一意に識別する"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計",
+      "qtype": "choice"
+    },
+    {
+      "q": "外部キーとは？",
+      "answer": "他の表のキーを参照して整合性を保つ列",
+      "choices": [
+        "主キーの別名",
+        "暗号化用のキー",
+        "自動採番されるキー",
+        "他の表のキーを参照して整合性を保つ列"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計",
+      "qtype": "choice"
+    },
+    {
+      "q": "第1正規形で行うことは？",
+      "answer": "繰り返し項目をなくし値を1つにする",
+      "choices": [
+        "部分従属をなくす",
+        "推移従属をなくす",
+        "表を分割しない",
+        "繰り返し項目をなくし値を1つにする"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "正規化",
+      "qtype": "choice"
+    },
+    {
+      "q": "第2正規形で行うことは？",
+      "answer": "主キーの一部だけに従属する列を別表に分ける",
+      "choices": [
+        "繰り返し項目をなくす",
+        "推移的従属をなくす",
+        "外部キーを作る",
+        "主キーの一部だけに従属する列を別表に分ける"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "正規化",
+      "qtype": "choice"
+    },
+    {
+      "q": "第3正規形で行うことは？",
+      "answer": "主キー以外の列に従属する列（推移的従属）を別表に分ける",
+      "choices": [
+        "部分従属をなくす",
+        "繰り返し項目をなくす",
+        "主キーをなくす",
+        "主キー以外の列に従属する列（推移的従属）を別表に分ける"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "正規化",
+      "qtype": "choice"
+    },
+    {
+      "q": "表から条件に合う行を取り出すSQLは？",
+      "answer": "SELECT 列 FROM 表 WHERE 条件",
+      "choices": [
+        "GET 列 FROM 表",
+        "FIND 列 WHERE 条件",
+        "EXTRACT 表 WHERE 条件",
+        "SELECT 列 FROM 表 WHERE 条件"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "得点の高い順に並べるSQLは？",
+      "answer": "ORDER BY 得点 DESC",
+      "choices": [
+        "ORDER BY 得点 ASC",
+        "SORT 得点 DOWN",
+        "GROUP BY 得点",
+        "ORDER BY 得点 DESC"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "GROUP BY の役割は？",
+      "answer": "指定した列の値ごとにグループ化して集計する",
+      "choices": [
+        "行を並べ替える",
+        "表を結合する",
+        "行を削除する",
+        "指定した列の値ごとにグループ化して集計する"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "HAVING句は何に対する条件？",
+      "answer": "GROUP BYで集計した後のグループ",
+      "choices": [
+        "並べ替え前の行",
+        "結合する表",
+        "INSERTする値",
+        "GROUP BYで集計した後のグループ"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "COUNT(*) が返すものは？",
+      "answer": "行数",
+      "choices": [
+        "列数",
+        "NULLの数",
+        "重複の数",
+        "行数"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "表に新しい行を追加するSQLは？",
+      "answer": "INSERT INTO",
+      "choices": [
+        "UPDATE",
+        "ADD ROW",
+        "APPEND",
+        "INSERT INTO"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "既存の行の値を変更するSQLは？",
+      "answer": "UPDATE",
+      "choices": [
+        "INSERT",
+        "CHANGE",
+        "MODIFY",
+        "UPDATE"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "表から行を削除するSQLは？",
+      "answer": "DELETE",
+      "choices": [
+        "REMOVE",
+        "DROP TABLE",
+        "ERASE",
+        "DELETE"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "2つの表で一致する行だけを結合するのは？",
+      "answer": "INNER JOIN（内部結合）",
+      "choices": [
+        "UNION",
+        "CROSS JOIN",
+        "LEFT OUTER JOIN",
+        "INNER JOIN（内部結合）"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "検索を高速化するために列に設定する仕組みは？",
+      "answer": "インデックス",
+      "choices": [
+        "トリガ",
+        "ビュー",
+        "カーソル",
+        "インデックス"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS",
+      "qtype": "choice"
+    },
+    {
+      "q": "複数人が同時に更新して壊れないようにする仕組みは？",
+      "answer": "排他制御（ロック）",
+      "choices": [
+        "正規化",
+        "バックアップ",
+        "インデックス",
+        "排他制御（ロック）"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS",
+      "qtype": "choice"
+    },
+    {
+      "q": "トランザクションの原子性（Atomicity）とは？",
+      "answer": "全部成功するか全部取り消されるかのどちらか",
+      "choices": [
+        "処理が速いこと",
+        "データが暗号化されること",
+        "同時実行できること",
+        "全部成功するか全部取り消されるかのどちらか"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS",
+      "qtype": "choice"
+    },
+    {
+      "q": "トランザクションを確定・取消する命令の組合せは？",
+      "answer": "COMMIT／ROLLBACK",
+      "choices": [
+        "SAVE／LOAD",
+        "BEGIN／END",
+        "YES／NO",
+        "COMMIT／ROLLBACK"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "DBMS",
+      "qtype": "choice"
+    },
+    {
+      "q": "E-R図が表すものは？",
+      "answer": "実体（エンティティ）と関連（リレーションシップ）",
+      "choices": [
+        "処理の流れ",
+        "時間と成果物",
+        "ネットワーク構成",
+        "実体（エンティティ）と関連（リレーションシップ）"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計",
+      "qtype": "choice"
+    },
+    {
+      "q": "「1人の顧客に複数の注文がある」関係は？",
+      "answer": "1対多",
+      "choices": [
+        "1対1",
+        "多対多",
+        "多対1",
+        "1対多"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "データベースの設計",
+      "qtype": "choice"
+    },
+    {
+      "q": "SQLで値が存在しないことを表す特別な値は？",
+      "answer": "NULL",
+      "choices": [
+        "0",
+        "空文字",
+        "FALSE",
+        "NULL"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "LIKE 'A%' がマッチするのは？",
+      "answer": "Aで始まる文字列",
+      "choices": [
+        "Aで終わる文字列",
+        "Aを含む文字列",
+        "Aだけの文字列",
+        "Aで始まる文字列"
+      ],
+      "department": "ビジネス情報",
+      "category": "データベースソフトウェアに関する知識",
+      "subcategory": "SQL",
+      "qtype": "choice"
+    },
+    {
+      "q": "フローチャートでひし形が表すものは？",
+      "answer": "判断・分岐",
+      "choices": [
+        "処理",
+        "入出力",
+        "開始/終了",
+        "判断・分岐"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "フローチャートで長方形が表すものは？",
+      "answer": "処理",
+      "choices": [
+        "判断",
+        "入出力",
+        "繰り返し",
+        "処理"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "フローチャートで平行四辺形が表すものは？",
+      "answer": "入出力",
+      "choices": [
+        "処理",
+        "判断",
+        "開始/終了",
+        "入出力"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "フローチャートで楕円（端子）が表すものは？",
+      "answer": "開始・終了",
+      "choices": [
+        "処理",
+        "判断",
+        "入出力",
+        "開始・終了"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "フローチャートの矢印が表すものは？",
+      "answer": "処理の流れの方向",
+      "choices": [
+        "データの内容",
+        "所要時間",
+        "担当者",
+        "処理の流れの方向"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "作業の順序と所要日数を矢印と丸で表し、クリティカルパスを求める図は？",
+      "answer": "アローダイアグラム",
+      "choices": [
+        "ガントチャート",
+        "パレート図",
+        "散布図",
+        "アローダイアグラム"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "縦に作業項目・横に期間を取り、横棒で予定と実績を表す図は？",
+      "answer": "ガントチャート",
+      "choices": [
+        "アローダイアグラム",
+        "レーダーチャート",
+        "特性要因図",
+        "ガントチャート"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "クリティカルパスとは？",
+      "answer": "遅れが全体の遅れに直結する最長経路",
+      "choices": [
+        "一番短い経路",
+        "一番コストが低い経路",
+        "人が一番多い経路",
+        "遅れが全体の遅れに直結する最長経路"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "開発工程",
+      "qtype": "choice"
+    },
+    {
+      "q": "不良項目を度数の大きい順に棒グラフで並べ累積折れ線を重ねた図は？",
+      "answer": "パレート図",
+      "choices": [
+        "散布図",
+        "ヒストグラム",
+        "管理図",
+        "パレート図"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "2つの変数の関係を点の分布で見る図は？",
+      "answer": "散布図",
+      "choices": [
+        "パレート図",
+        "ヒストグラム",
+        "円グラフ",
+        "散布図"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "データの散らばり具合を柱状に表す図は？",
+      "answer": "ヒストグラム",
+      "choices": [
+        "散布図",
+        "帯グラフ",
+        "レーダーチャート",
+        "ヒストグラム"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "「状態」と「イベント（きっかけ）」による状態の変化を表す図は？",
+      "answer": "状態遷移図",
+      "choices": [
+        "フローチャート",
+        "DFD",
+        "E-R図",
+        "状態遷移図"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "開発工程",
+      "qtype": "choice"
+    },
+    {
+      "q": "データの流れ・処理・蓄積・外部とのやりとりを表す図は？",
+      "answer": "DFD（データフローダイアグラム）",
+      "choices": [
+        "E-R図",
+        "ガントチャート",
+        "ヒストグラム",
+        "DFD（データフローダイアグラム）"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "開発工程",
+      "qtype": "choice"
+    },
+    {
+      "q": "特性と要因（結果と原因）の関係を魚の骨のように整理する図は？",
+      "answer": "特性要因図",
+      "choices": [
+        "パレート図",
+        "管理図",
+        "アローダイアグラム",
+        "特性要因図"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "問題解決の手法",
+      "qtype": "choice"
+    },
+    {
+      "q": "PERTはどんな手法？",
+      "answer": "作業日程を計画・管理する手法",
+      "choices": [
+        "品質を検査する手法",
+        "データを暗号化する手法",
+        "表を正規化する手法",
+        "作業日程を計画・管理する手法"
+      ],
+      "department": "ビジネス情報",
+      "category": "関連知識",
+      "subcategory": "開発工程",
+      "qtype": "choice"
+    },
+    {
+      "q": "IPv4アドレスの長さは？",
+      "answer": "32ビット",
+      "choices": [
+        "16ビット",
+        "64ビット",
+        "128ビット",
+        "32ビット"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル",
+      "qtype": "choice"
+    },
+    {
+      "q": "IPv6アドレスの長さは？",
+      "answer": "128ビット",
+      "choices": [
+        "32ビット",
+        "64ビット",
+        "256ビット",
+        "128ビット"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル",
+      "qtype": "choice"
+    },
+    {
+      "q": "ドメイン名をIPアドレスに変換する仕組みは？",
+      "answer": "DNS",
+      "choices": [
+        "DHCP",
+        "NAT",
+        "MAC",
+        "DNS"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル",
+      "qtype": "choice"
+    },
+    {
+      "q": "MACアドレスの長さは？",
+      "answer": "48ビット",
+      "choices": [
+        "32ビット",
+        "64ビット",
+        "128ビット",
+        "48ビット"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成",
+      "qtype": "choice"
+    },
+    {
+      "q": "異なるネットワーク同士を中継する機器は？",
+      "answer": "ルータ",
+      "choices": [
+        "リピータハブ",
+        "スイッチングハブ（L2）",
+        "ブリッジ",
+        "ルータ"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成",
+      "qtype": "choice"
+    },
+    {
+      "q": "無線LANの規格群は？",
+      "answer": "IEEE 802.11",
+      "choices": [
+        "IEEE 802.3",
+        "IEEE 1394",
+        "Bluetooth SIG 1.0",
+        "IEEE 802.11"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの構成",
+      "qtype": "choice"
+    },
+    {
+      "q": "SSL/TLSで通信を暗号化したHTTPは？",
+      "answer": "HTTPS",
+      "choices": [
+        "FTP",
+        "SMTP",
+        "HTTP/1.0",
+        "HTTPS"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "プロトコル",
+      "qtype": "choice"
+    },
+    {
+      "q": "内部ネットワークのPCの代わりにWebアクセスを行うサーバは？",
+      "answer": "プロキシサーバ",
+      "choices": [
+        "DNSサーバ",
+        "DHCPサーバ",
+        "メールサーバ",
+        "プロキシサーバ"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用",
+      "qtype": "choice"
+    },
+    {
+      "q": "不正な通信を遮断するためにネットワークの境目に置くものは？",
+      "answer": "ファイアウォール",
+      "choices": [
+        "ルータ",
+        "ハブ",
+        "プロキシ",
+        "ファイアウォール"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用",
+      "qtype": "choice"
+    },
+    {
+      "q": "公衆回線上に仮想的な専用線を作る技術は？",
+      "answer": "VPN",
+      "choices": [
+        "VLAN",
+        "DNS",
+        "QoS",
+        "VPN"
+      ],
+      "department": "共通",
+      "category": "通信ネットワークに関する知識",
+      "subcategory": "ネットワークの活用",
+      "qtype": "choice"
+    },
+    {
+      "q": "2要素認証とは？",
+      "answer": "知識・所持・生体など異なる2種類の要素を組み合わせる認証",
+      "choices": [
+        "パスワードを2回入力する認証",
+        "2人で承認する認証",
+        "2台のPCでのみできる認証",
+        "知識・所持・生体など異なる2種類の要素を組み合わせる認証"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "フィッシング詐欺とは？",
+      "answer": "偽のサイトやメールでIDやパスワードを盗む手口",
+      "choices": [
+        "PCを暗号化して身代金を要求する手口",
+        "サーバに大量アクセスして落とす手口",
+        "USBメモリで感染する手口",
+        "偽のサイトやメールでIDやパスワードを盗む手口"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "CAPTCHAの目的は？",
+      "answer": "人間か自動プログラムかを判別する",
+      "choices": [
+        "通信を暗号化する",
+        "ウイルスを検出する",
+        "パスワードを保存する",
+        "人間か自動プログラムかを判別する"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "公開鍵暗号方式では？",
+      "answer": "公開鍵で暗号化し秘密鍵で復号する",
+      "choices": [
+        "同じ鍵で暗号化・復号する",
+        "鍵を使わない",
+        "秘密鍵で暗号化し公開鍵で復号する",
+        "公開鍵で暗号化し秘密鍵で復号する"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "共通鍵暗号方式では？",
+      "answer": "同じ秘密鍵で暗号化・復号する",
+      "choices": [
+        "公開鍵と秘密鍵を使い分ける",
+        "鍵をネットで共有する",
+        "鍵は不要",
+        "同じ秘密鍵で暗号化・復号する"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "電子証明書が証明するものは？",
+      "answer": "公開鍵の正当性（持ち主が本物であること）",
+      "choices": [
+        "通信速度の速さ",
+        "ソフトの価格",
+        "メールの未読数",
+        "公開鍵の正当性（持ち主が本物であること）"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "Cookieとは？",
+      "answer": "Webサーバがブラウザに保存させる識別情報",
+      "choices": [
+        "ウイルスの一種",
+        "広告を消す仕組み",
+        "通信を暗号化する鍵",
+        "Webサーバがブラウザに保存させる識別情報"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "ゼロデイ攻撃とは？",
+      "answer": "修正プログラム公開前の脆弱性を突く攻撃",
+      "choices": [
+        "深夜0時に行われる攻撃",
+        "対策済みの脆弱性への攻撃",
+        "0個のパケットで落とす攻撃",
+        "修正プログラム公開前の脆弱性を突く攻撃"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "ランサムウェアとは？",
+      "answer": "ファイルを暗号化し復号と引き換えに身代金を要求するマルウェア",
+      "choices": [
+        "広告を表示するだけのソフト",
+        "PCを掃除するソフト",
+        "匿名で通信する技術",
+        "ファイルを暗号化し復号と引き換えに身代金を要求するマルウェア"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
+    },
+    {
+      "q": "DoS攻撃とは？",
+      "answer": "大量の要求を送りサービスを停止させる攻撃",
+      "choices": [
+        "パスワードを辞書から総当たりする攻撃",
+        "メールを盗聴する攻撃",
+        "USBを抜き去る攻撃",
+        "大量の要求を送りサービスを停止させる攻撃"
+      ],
+      "department": "共通",
+      "category": "情報モラルとセキュリティに関する知識",
+      "subcategory": "セキュリティ",
+      "qtype": "choice"
     }
   ]
 }

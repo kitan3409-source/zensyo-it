@@ -351,9 +351,11 @@
   <div class="card gameArea" id="rankCard">
     <h2>ランキング</h2>
     <div class="tabs" id="rankTabs">
-      <button data-t="power" class="on">つよさ</button>
-      <button data-t="rank">ランク</button>
+      <button data-t="overall" class="on">総合</button>
+      <button data-t="acc">正答率</button>
+      <button data-t="power">つよさ</button>
       <button data-t="weekly">今週のpt</button>
+      <button data-t="rank">ランク</button>
       <button data-t="streak">連続ログイン</button>
     </div>
     <div id="rankList"></div>
@@ -373,6 +375,7 @@
 let TERMS = [];
 let session = null;
 let answered = false;
+let answerGuardUntil = 0;
 const $ = (id) => document.getElementById(id);
 
 let token = localStorage.getItem('quiz-token') || '';
@@ -429,7 +432,7 @@ const SLOT_KEYS = ['head', 'body', 'lhand', 'rhand', 'pants', 'feet'];
 const RANK_TITLE = { SS: '情報の神', S: '電脳賢者', A: '検定の覇者', B: '用語マスター', C: '問題ハンター', D: '勉強家見習い', E: 'ただの生徒' };
 let me = null;
 let rankData = null;
-let rankTab = 'power';
+let rankTab = 'overall';
 
 function allItems() {
   const m = { ...(me ? me.items : {}) };
@@ -472,8 +475,9 @@ async function loadGame() {
   }).join('');
 
   const bs = me.boss;
-  $('bossName').textContent = bs.defeated ? `${bs.name} — 討伐済み` : bs.name;
-  $('bossSub').textContent = bs.defeated ? '貢献者全員に+200pt配布済み' : '正解でダメージ（つよさが高いほど大ダメージ）';
+  const bossLv = bs.tier > 1 ? ` Lv.${bs.tier}` : '';
+  $('bossName').textContent = bs.defeated ? `${bs.name}${bossLv} — 討伐済み` : bs.name + bossLv;
+  $('bossSub').textContent = bs.defeated ? '貢献者全員に報酬配布済み — 次の強敵がまもなく出現' : '正解でダメージ（つよさが高いほど大ダメージ）— 倒すと次はもっと強い';
   $('bossBar').style.width = Math.round(bs.hp / bs.max_hp * 100) + '%';
   $('bossMy').textContent = `あなたのダメージ: ${bs.my_dmg}`;
   $('bossAtk').textContent = `参加者 ${bs.attackers}人 / 残りHP ${bs.hp}`;
@@ -512,6 +516,8 @@ async function loadGame() {
 }
 
 const RANK_FMT = {
+  overall: (r) => `総合 ${r.score}（つよさ×正答率）`,
+  acc: (r) => `正答率 ${r.acc}%（実測${r.raw_acc}%・${r.total}問）`,
   power: (r) => `つよさ ${r.power}`,
   rank: (r) => `ランク${r.rank}（${r.total}問）`,
   weekly: (r) => `今週 +${r.weekly}pt`,
@@ -578,9 +584,11 @@ function normDeck(j) {
   const terms = [];
   for (const t of arr) {
     const term = String(t.term != null ? t.term : (t.q != null ? t.q : (Array.isArray(t) ? t[0] : ''))).trim();
-    const meaning = String(t.meaning != null ? t.meaning : (t.a != null ? t.a : (Array.isArray(t) ? t[1] : ''))).trim();
+    const meaning = String(t.meaning != null ? t.meaning : (t.answer != null ? t.answer : (t.a != null ? t.a : (Array.isArray(t) ? t[1] : '')))).trim();
     if (!term || !meaning) continue;
-    terms.push({ term, meaning, department: String(t.department || (j && j.exam) || 'カスタム'), category: String(t.category || '全般') });
+    const rec = { term, meaning, department: String(t.department || (j && j.exam) || 'カスタム'), category: String(t.category || '全般') };
+    if (Array.isArray(t.choices) && t.choices.length >= 4) rec.choices = t.choices.map(c => String(c).trim());
+    terms.push(rec);
   }
   return terms.length >= 4 ? { name: (j && (j.exam || j.name)) || 'カスタム問題セット', terms } : null;
 }
@@ -634,7 +642,8 @@ if (customDeck) {
 }
 if (!TERMS.length) {
   fetch('/terms').then(r => r.json()).then(d => {
-    applyDeck({ name: '全商 情報処理1級', terms: d.terms || d });
+    const deck = normDeck(d);
+    if (deck) applyDeck(deck);
     showSignedIn();
     startQuiz();
   });
@@ -673,26 +682,34 @@ function startQuiz() {
 
 function showQuestion() {
   answered = false;
+  answerGuardUntil = Date.now() + 700;
   const t = session.qs[session.idx];
-  const t2m = Math.random() < 0.5;
-  const key = t2m ? 'meaning' : 'term';
-  const same = shuffle(TERMS.filter(x => x.term !== t.term && x.category === t.category));
-  const others = shuffle(TERMS.filter(x => x.term !== t.term && x.category !== t.category));
-  const poolArr = same.concat(others);
-  const distractors = [];
-  for (const x of poolArr) {
-    if (distractors.length >= 3) break;
-    if (x[key] !== t[key] && !distractors.includes(x[key])) distractors.push(x[key]);
+  let t2m, key, choices;
+  if (t.choices && t.choices.length >= 4) {
+    t2m = null;
+    key = 'meaning';
+    choices = shuffle(t.choices);
+  } else {
+    t2m = Math.random() < 0.5;
+    key = t2m ? 'meaning' : 'term';
+    const same = shuffle(TERMS.filter(x => x.term !== t.term && x.category === t.category && !x.choices));
+    const others = shuffle(TERMS.filter(x => x.term !== t.term && x.category !== t.category && !x.choices));
+    const poolArr = same.concat(others);
+    const distractors = [];
+    for (const x of poolArr) {
+      if (distractors.length >= 3) break;
+      if (x[key] !== t[key] && !distractors.includes(x[key])) distractors.push(x[key]);
+    }
+    choices = shuffle([t[key], ...distractors]);
   }
-  const choices = shuffle([t[key], ...distractors]);
   session.current = { t, t2m, key, choices };
 
   $('bar').style.width = (session.idx / session.qs.length * 100) + '%';
   $('qNum').textContent = `問題 ${session.idx + 1} / ${session.qs.length} ｜ ${t.department} ／ ${t.category}`;
-  $('qBadge').textContent = t2m ? 'この用語の意味は？' : 'この意味の用語は？';
+  $('qBadge').textContent = t2m === null ? 'この問題の答えは？' : (t2m ? 'この用語の意味は？' : 'この意味の用語は？');
   const pr = $('qPrompt');
-  pr.textContent = t2m ? t.term : t.meaning;
-  pr.className = 'prompt' + (t2m ? ' term' : '');
+  pr.textContent = t2m === false ? t.meaning : t.term;
+  pr.className = 'prompt' + (t2m !== false ? ' term' : '');
   const box = $('choices');
   box.innerHTML = '';
   choices.forEach((c, i) => {
@@ -710,6 +727,7 @@ function showQuestion() {
 
 async function answer(i) {
   if (answered) return;
+  if (Date.now() < answerGuardUntil) return;
   if (!token) {
     $('loginHint').style.display = 'block';
     $('signinArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -718,6 +736,7 @@ async function answer(i) {
   answered = true;
   const { t, t2m, key, choices } = session.current;
   const correct = choices[i] === t[key];
+  session.prevStreak = session.streak;
   if (correct) { session.correct++; session.streak++; } else { session.streak = 0; }
 
   [...$('choices').children].forEach((b, j) => {
@@ -742,11 +761,17 @@ async function answer(i) {
       body: JSON.stringify({
         token: token,
         term: t.term,
-        direction: t2m ? 't2m' : 'm2t',
+        direction: t2m === null ? 'q4' : (t2m ? 't2m' : 'm2t'),
         correct: correct
       })
     });
     const ad = ar.ok ? await ar.json() : null;
+    if (ad && ad.too_fast) {
+      if (correct) { session.correct--; session.streak--; } else { session.streak = session.prevStreak || 0; }
+      updateStats();
+      fb.innerHTML += ' <b>連打ガード：速すぎる回答は記録されません</b>';
+      return;
+    }
     if (ad) {
       if (me) { me.points = ad.points; $('pointVal').textContent = ad.points; }
       const notes = [];
@@ -756,9 +781,11 @@ async function answer(i) {
       if (ad.rank_up) notes.push(`ランクアップ！ ${ad.rank_up}（${RANK_TITLE[ad.rank_up] || ''}）`);
       if (ad.level_up) notes.push(`レベルアップ！ Lv${ad.level_up}（基礎攻撃力+10）`);
       if (ad.level !== undefined && me) { me.level = ad.level; me.correct_total = ad.correct_total; $('levelVal').textContent = ad.level; }
-      if (ad.boss) notes.push(ad.boss.killed ? `ボス「${ad.boss.name}」討伐！ +200pt` : `ボスに${ad.boss.dmg}ダメージ`);
+      if (ad.boss) notes.push(ad.boss.killed ? `ボス「${ad.boss.name}」討伐！ 貢献報酬+${ad.boss.reward || 200}pt` : `ボスに${ad.boss.dmg}ダメージ`);
       if (notes.length) fb.innerHTML += ' <b>' + notes.map(esc).join(' / ') + '</b>';
-      loadGame();
+      const big = ad.level_up || ad.rank_up || (ad.ach_new && ad.ach_new.length) ||
+        (ad.missions_done && ad.missions_done.length) || (ad.boss && ad.boss.killed);
+      if (big || (session.idx + 1) % 8 === 0 || session.idx + 1 >= session.qs.length) loadGame();
     }
   } catch (e) { /* 記録失敗しても進める */ }
 }

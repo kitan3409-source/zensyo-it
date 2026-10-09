@@ -20,24 +20,31 @@ export async function onRequestGet({ request, env }) {
   ).bind(Date.now() / 1000 - 7 * 86400).all();
   const weekMap = {};
   for (const r of week.results) {
-    weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 8 + r.c * 2;
+    weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 10;
   }
   const list = [];
   for (const u of users.results) {
     const t = await getTotals(env, u);
     const id = u.email.split("@")[0];
+    const power = basePower(levelOf(t.correct)) + (eqP[u.email] || 0);
+    const adj = (t.correct + 12) / (t.total + 20);
     list.push({
       id,
       name: u.name || "",
-      power: basePower(levelOf(t.correct)) + (eqP[u.email] || 0),
+      power,
       points: u.points,
       streak: u.login_streak || 0,
       total: t.total,
       weekly: weekMap[id] || 0,
       rank: rankOf(t.total),
+      acc: Math.round(adj * 1000) / 10,
+      raw_acc: t.total ? Math.round((t.correct / t.total) * 1000) / 10 : 0,
+      score: Math.round(power * adj),
     });
   }
   return json({
+    overall: [...list].sort((a, b) => b.score - a.score).slice(0, 30),
+    acc: [...list].sort((a, b) => b.acc - a.acc || b.total - a.total).slice(0, 30),
     power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
     weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
     rank: [...list].sort((a, b) => b.total - a.total).slice(0, 30),

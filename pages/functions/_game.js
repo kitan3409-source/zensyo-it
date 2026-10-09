@@ -145,6 +145,7 @@ export const ACH = {
   fulleq: { name: "フル装備", desc: "6スロットすべてに装備", bonus: 100 },
   lv5: { name: "レベル5", desc: "レベル5に到達", bonus: 150 },
   lv10: { name: "レベル10", desc: "レベル10に到達", bonus: 400 },
+  sharp: { name: "精密射撃", desc: "30問以上回答で正答率90%以上", bonus: 120 },
 };
 
 export const RANKS = [
@@ -162,7 +163,7 @@ export const BOSS_NAMES = [
   "メモリリークの巨獣", "404番目の亡霊", "暗黒SQLインジェクタ",
   "フリーズの鬼神", "文字化けモンスター",
 ];
-export const BOSS_HP = 2000;
+export function bossHp(tier) { return 20000 * Math.max(1, tier); }
 
 export function rankOf(total) {
   for (const r of RANKS) if (total >= r.min) return r.label;
@@ -216,6 +217,8 @@ export async function ensureGameTables(env) {
     "ALTER TABLE users ADD COLUMN answered_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN correct_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN last_activity REAL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN acc_ema REAL DEFAULT -1",
+    "ALTER TABLE boss ADD COLUMN tier INTEGER DEFAULT 1",
   ];
   for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
   const mig = [
@@ -327,7 +330,7 @@ export async function getTermsMap(env, origin) {
     const r = await env.ASSETS.fetch(new Request(origin + "/terms.json"));
     const j = await r.json();
     TERMS_MAP = {};
-    for (const t of (j.terms || j)) TERMS_MAP[t.term] = t.category;
+    for (const t of (j.terms || j)) TERMS_MAP[t.term || t.q] = t.category;
   } catch {}
   return TERMS_MAP || {};
 }
@@ -376,11 +379,13 @@ export async function checkRegions(env, email, origin) {
 export async function getBoss(env, email) {
   const wk = weekKey();
   let b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
-  if (!b || b.week !== wk) {
-    const name = BOSS_NAMES[Math.abs(hashCode(wk)) % BOSS_NAMES.length];
+  if (!b || b.defeated) {
+    const tier = b && b.max_hp >= 10000 ? (b.tier || 1) + 1 : 1;
+    const name = BOSS_NAMES[Math.abs(hashCode(wk + "-" + tier)) % BOSS_NAMES.length];
+    const hp = bossHp(tier);
     await env.DB.prepare(
-      "INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)"
-    ).bind(wk, name, BOSS_HP, BOSS_HP).run();
+      "INSERT INTO boss (week, name, hp, max_hp, tier) VALUES (?, ?, ?, ?, ?)"
+    ).bind(wk, name, hp, hp, tier).run();
     b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
   }
   let my = 0;
@@ -393,12 +398,11 @@ export async function getBoss(env, email) {
   const c = await env.DB.prepare(
     "SELECT COUNT(DISTINCT email) AS c FROM boss_damage WHERE boss_id=?"
   ).bind(b.id).first();
-  return { name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers: c ? c.c : 0 };
+  return { id: b.id, name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers: c ? c.c : 0, tier: b.tier || 1 };
 }
 
 export async function damageBoss(env, email, dmg) {
-  const wk = weekKey();
-  const b = await env.DB.prepare("SELECT * FROM boss WHERE week=?").bind(wk).first();
+  const b = await getBoss(env, email);
   if (!b || b.defeated) return null;
   const newHp = Math.max(0, b.hp - dmg);
   await env.DB.prepare("UPDATE boss SET hp=? WHERE id=?").bind(newHp, b.id).run();
@@ -411,10 +415,11 @@ export async function damageBoss(env, email, dmg) {
     const parts = await env.DB.prepare(
       "SELECT email FROM boss_damage WHERE boss_id=?"
     ).bind(b.id).all();
+    const reward = 150 + 50 * (b.tier || 1);
     for (const p of parts.results) {
-      await env.DB.prepare("UPDATE users SET points=points+200 WHERE email=?").bind(p.email).run();
+      await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(reward, p.email).run();
     }
-    return { killed: true, name: b.name, dmg };
+    return { killed: true, name: b.name, dmg, reward, tier: b.tier || 1 };
   }
   return { killed: false, dmg, hp: newHp };
 }
@@ -495,8 +500,14 @@ export async function verifySession(env, token) {
   }
   const secret = await getSecret(env);
   if ((await hmacSha256(secret, payload)) !== sig) return null;
-  const [email, name, exp] = payload.split("|");
+  const [email, name, exp, fp] = payload.split("|");
   if (Number(exp) < Date.now()) return null;
+  if (email && !email.includes("@")) {
+    try {
+      const pr = await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(email).first();
+      if (!pr || String(pr.pin).slice(0, 12) !== (fp || "")) return null;
+    } catch { return null; }
+  }
   return { email, name };
 }
 

@@ -21,7 +21,7 @@ export async function onRequestPost({ request, env }) {
   const name = t.name || "";
   const secret = await getSecret(env);
   const exp = Date.now() + 7 * 24 * 3600 * 1000;
-  const payload = `${email}|${name}|${exp}`;
+  const payload = `${email}|${name}|${exp}|`;
   const sig = await hmacSha256(secret, payload);
   const token = b64e(payload) + "." + sig;
   return json({ token, display: `${email.split("@")[0]} ${name}` });

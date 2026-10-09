@@ -20,9 +20,10 @@ export async function onRequestPost({ request, env }) {
   } else {
     await env.DB.prepare("INSERT INTO pins (email, pin) VALUES (?, ?)").bind(sid, hash).run();
   }
+  const storedPin = stored ? stored.pin : hash;
   const secret = await getSecret(env);
   const exp = Date.now() + 7 * 24 * 3600 * 1000;
-  const payload = `${sid}|${name}|${exp}`;
+  const payload = `${sid}|${name}|${exp}|${storedPin.slice(0, 12)}`;
   const sig = await hmacSha256(secret, payload);
   return json({ token: b64e(payload) + "." + sig, display: `${sid} ${name}` });
 }

@@ -36,7 +36,7 @@ async function handle(request, env) {
       const name = t.name || "";
       const secret = await getSecret(env);
       const exp = Date.now() + 7 * 24 * 3600 * 1000;
-      const payload = `${email}|${name}|${exp}`;
+      const payload = `${email}|${name}|${exp}|`;
       const sig = await hmacSha256(secret, payload);
       const token = b64e(payload) + "." + sig;
       return json({ token, display: `${email.split("@")[0]} ${name}` });
@@ -63,9 +63,10 @@ async function handle(request, env) {
         } else {
           await env.DB.prepare("INSERT INTO pins (email, pin) VALUES (?, ?)").bind(sid, hash).run();
         }
+        const storedPin = (await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(sid).first()).pin;
         const secret = await getSecret(env);
         const exp = Date.now() + 7 * 24 * 3600 * 1000;
-        const payload = `${sid}|${name}|${exp}`;
+        const payload = `${sid}|${name}|${exp}|${storedPin.slice(0, 12)}`;
         const sig = await hmacSha256(secret, payload);
         return json({ token: b64e(payload) + "." + sig, display: `${sid} ${name}` });
       } catch {
@@ -85,6 +86,31 @@ async function handle(request, env) {
       if (!sid) return json({ error: "bad sid" }, 400);
       await ensureGameTables(env);
       await env.DB.prepare("DELETE FROM pins WHERE email=?").bind(sid).run();
+      return json({ ok: true });
+    }
+
+    if (url.pathname === "/api/user_reset" && request.method === "POST") {
+      let b;
+      try {
+        b = await request.json();
+      } catch {
+        return json({ error: "bad request" }, 400);
+      }
+      if (!(await pwMatches(env, b.pw || ""))) return json({ error: "forbidden" }, 403);
+      const sid = String(b.sid || "").slice(0, 24);
+      if (!sid) return json({ error: "bad sid" }, 400);
+      await ensureGameTables(env);
+      for (const t of [
+        "pins", "users", "inventory", "equipped",
+        "missions", "achievements", "boss_damage",
+      ]) {
+        try {
+          await env.DB.prepare(`DELETE FROM ${t} WHERE email=?`).bind(sid).run();
+        } catch {}
+      }
+      try {
+        await env.DB.prepare("DELETE FROM answers WHERE student LIKE ?").bind(sid + " %").run();
+      } catch {}
       return json({ ok: true });
     }
 
@@ -243,24 +269,31 @@ async function handle(request, env) {
       ).bind(Date.now() / 1000 - 7 * 86400).all();
       const weekMap = {};
       for (const r of week.results) {
-        weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 8 + r.c * 2;
+        weekMap[String(r.student).split(" ")[0]] = (r.s || 0) * 10;
       }
       const list = [];
       for (const u of users.results) {
         const t = await getTotals(env, u);
         const id = u.email.split("@")[0];
+        const power = basePower(levelOf(t.correct)) + (eqP[u.email] || 0);
+        const adj = (t.correct + 12) / (t.total + 20);
         list.push({
           id,
           name: u.name || "",
-          power: basePower(levelOf(t.correct)) + (eqP[u.email] || 0),
+          power,
           points: u.points,
           streak: u.login_streak || 0,
           total: t.total,
           weekly: weekMap[id] || 0,
           rank: rankOf(t.total),
+          acc: Math.round(adj * 1000) / 10,
+          raw_acc: t.total ? Math.round((t.correct / t.total) * 1000) / 10 : 0,
+          score: Math.round(power * adj),
         });
       }
       return json({
+        overall: [...list].sort((a, b) => b.score - a.score).slice(0, 30),
+        acc: [...list].sort((a, b) => b.acc - a.acc || b.total - a.total).slice(0, 30),
         power: [...list].sort((a, b) => b.power - a.power || b.points - a.points).slice(0, 30),
         weekly: [...list].sort((a, b) => b.weekly - a.weekly).slice(0, 30),
         rank: [...list].sort((a, b) => b.total - a.total).slice(0, 30),
@@ -276,32 +309,37 @@ async function handle(request, env) {
       if (!sess) return json({ error: "ログインしてください" }, 401);
       const student = `${sess.email.split("@")[0]} ${sess.name}`.slice(0, 50);
       if (!env.DB) return json({ error: "DB binding がありません（Variable name DB で D1 を割り当ててください）" }, 500);
+      const u = await getUser(env, sess.email, sess.name);
+      const now = Date.now() / 1000;
+      if (u.last_activity && now - u.last_activity < 1.0) {
+        return json({ ok: false, too_fast: true, error: "連打ガード：少し間をあけて答えて" });
+      }
+      const c01 = b.correct ? 1 : 0;
+      const term = String(b.term || "").slice(0, 200);
+      const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
+      const tot = await getTotals(env, u);
+      const power = await getPower(env, sess.email, tot.correct + c01);
+      const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
+      const earned = (b.correct ? 10 : 0) + combo;
       try {
-        await env.DB.prepare(
-          "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
-        ).bind(student, String(b.term || "").slice(0, 200), String(b.direction || "").slice(0, 10),
-          b.correct ? 1 : 0, Date.now() / 1000).run();
+        await env.DB.batch([
+          env.DB.prepare(
+            "INSERT INTO answers (student, term, direction, correct, ts) VALUES (?, ?, ?, ?, ?)"
+          ).bind(student, term, String(b.direction || "").slice(0, 10), c01, now),
+          env.DB.prepare(
+            "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, " +
+            "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=?, " +
+            "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?), " +
+            "acc_ema=CASE WHEN acc_ema<0 THEN ? ELSE acc_ema*0.8+? END WHERE email=?"
+          ).bind(c01, now, earned, earned, streak, streak, c01, c01 * 0.2, sess.email),
+          env.DB.prepare(
+            "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
+            "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"
+          ).bind(term, c01, now),
+        ]);
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
-      const c01 = b.correct ? 1 : 0;
-      await env.DB.prepare(
-        "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, " +
-        "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=? WHERE email=?"
-      ).bind(c01, Date.now() / 1000, sess.email).run();
-      await env.DB.prepare(
-        "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
-        "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"
-      ).bind(String(b.term || "").slice(0, 200), c01, Date.now() / 1000).run();
-      const u = await getUser(env, sess.email, sess.name);
-      const streak = b.correct ? (u.cur_streak || 0) + 1 : 0;
-      const tot = await getTotals(env, u);
-      const power = await getPower(env, sess.email, tot.correct);
-      const combo = b.correct && streak >= 3 ? Math.min(streak * 2, 20) : 0;
-      const earned = (b.correct ? 10 : 2) + combo;
-      await env.DB.prepare(
-        "UPDATE users SET points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?"
-      ).bind(earned, earned, streak, streak, sess.email).run();
       const doneM = [];
       const m1 = await bumpMission(env, sess.email, "ans10", 1, true);
       if (m1) doneM.push(m1);
@@ -313,31 +351,45 @@ async function handle(request, env) {
       }
       let bossRes = null;
       if (b.correct) bossRes = await damageBoss(env, sess.email, 1 + Math.floor(power / 80));
-      const total = tot.total;
-      const correctTotal = tot.correct;
+      const total = tot.total + 1;
+      const correctTotal = tot.correct + c01;
       const level = levelOf(correctTotal);
       const levelUp = level > levelOf(correctTotal - (b.correct ? 1 : 0)) ? level : null;
       const hour = new Date(Date.now() + 9 * 3600e3).getUTCHours();
+      const unlockedRows = await env.DB.prepare(
+        "SELECT key FROM achievements WHERE email=?"
+      ).bind(sess.email).all();
+      const unlocked = new Set(unlockedRows.results.map((r) => r.key));
+      const cand = [
+        ["first", total >= 1], ["ans50", total >= 50], ["ans100", total >= 100],
+        ["ans300", total >= 300], ["ans500", total >= 500],
+        ["streak10", streak >= 10], ["streak20", streak >= 20], ["streak30", streak >= 30],
+        ["early", hour < 7], ["night", hour >= 23],
+        ["rich", (u.lifetime || 0) + earned >= 1000],
+        ["lv5", level >= 5], ["lv10", level >= 10],
+        ["boss", !!(bossRes && bossRes.killed)],
+        ["sharp", correctTotal >= 30 && correctTotal / total >= 0.9],
+      ];
       const newAch = [];
-      const tryA = async (k, c) => { const a = await grantAch(env, sess.email, k, c); if (a) newAch.push(a); };
-      await tryA("first", total >= 1);
-      await tryA("ans50", total >= 50);
-      await tryA("ans100", total >= 100);
-      await tryA("ans300", total >= 300);
-      await tryA("ans500", total >= 500);
-      await tryA("streak10", streak >= 10);
-      await tryA("streak20", streak >= 20);
-      await tryA("streak30", streak >= 30);
-      await tryA("early", hour < 7);
-      await tryA("night", hour >= 23);
-      await tryA("rich", (u.lifetime || 0) + earned >= 1000);
-      await tryA("lv5", level >= 5);
-      await tryA("lv10", level >= 10);
-      if (bossRes && bossRes.killed) await tryA("boss", true);
+      const grants = cand.filter(([k, c]) => c && !unlocked.has(k));
+      if (grants.length) {
+        let bonusSum = 0;
+        const stmts = [];
+        for (const [k] of grants) {
+          const a = ACH[k];
+          bonusSum += a.bonus;
+          newAch.push({ key: k, name: a.name, desc: a.desc, bonus: a.bonus });
+          stmts.push(env.DB.prepare(
+            "INSERT OR IGNORE INTO achievements (email, key, ts) VALUES (?, ?, ?)"
+          ).bind(sess.email, k, Date.now()));
+        }
+        stmts.push(env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(bonusSum, sess.email));
+        await env.DB.batch(stmts);
+      }
       const regionHits = await checkRegions(env, sess.email);
       for (const r of regionHits) newAch.push(r);
       const points = (u.points || 0) + earned + doneM.reduce((s, x) => s + x.bonus, 0) +
-        newAch.reduce((s, x) => s + x.bonus, 0) + (bossRes && bossRes.killed ? 200 : 0);
+        newAch.reduce((s, x) => s + x.bonus, 0) + (bossRes && bossRes.killed ? bossRes.reward : 0);
       return json({
         ok: true, earned, combo, points,
         missions_done: doneM, ach_new: newAch,
@@ -390,7 +442,7 @@ async function handle(request, env) {
       await ensureGameTables(env);
       try {
         const us = await env.DB.prepare(
-          "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
+          "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity, acc_ema FROM users"
         ).all();
         const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
         const termRows = await env.DB.prepare(
@@ -417,6 +469,8 @@ async function handle(request, env) {
             rank: rankOf(a),
             streak: u.login_streak || 0,
             last_ts: u.last_activity || 0,
+            recent_rate: u.acc_ema >= 0 ? Math.round(u.acc_ema * 1000) / 10 : null,
+            suspect: a >= 15 && u.acc_ema >= 0 && u.acc_ema < 0.35,
           });
         }
         students.sort((x, y) => y.last_ts - x.last_ts);
@@ -593,6 +647,7 @@ const ACH = {
   fulleq: { name: "フル装備", desc: "6スロットすべてに装備", bonus: 100 },
   lv5: { name: "レベル5", desc: "レベル5に到達", bonus: 150 },
   lv10: { name: "レベル10", desc: "レベル10に到達", bonus: 400 },
+  sharp: { name: "精密射撃", desc: "30問以上回答で正答率90%以上", bonus: 120 },
 };
 
 const RANKS = [
@@ -610,7 +665,7 @@ const BOSS_NAMES = [
   "メモリリークの巨獣", "404番目の亡霊", "暗黒SQLインジェクタ",
   "フリーズの鬼神", "文字化けモンスター",
 ];
-const BOSS_HP = 2000;
+function bossHp(tier) { return 20000 * Math.max(1, tier); }
 
 function rankOf(total) {
   for (const r of RANKS) if (total >= r.min) return r.label;
@@ -664,6 +719,8 @@ async function ensureGameTables(env) {
     "ALTER TABLE users ADD COLUMN answered_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN correct_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN last_activity REAL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN acc_ema REAL DEFAULT -1",
+    "ALTER TABLE boss ADD COLUMN tier INTEGER DEFAULT 1",
   ];
   for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
   const mig = [
@@ -776,7 +833,7 @@ async function getTermsMap(env) {
     const r = await env.ASSETS.fetch(new Request("https://assets.local/terms.json"));
     const j = await r.json();
     TERMS_MAP = {};
-    for (const t of (j.terms || j)) TERMS_MAP[t.term] = t.category;
+    for (const t of (j.terms || j)) TERMS_MAP[t.term || t.q] = t.category;
   } catch {}
   return TERMS_MAP || {};
 }
@@ -825,11 +882,13 @@ async function checkRegions(env, email) {
 async function getBoss(env, email) {
   const wk = weekKey();
   let b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
-  if (!b || b.week !== wk) {
-    const name = BOSS_NAMES[Math.abs(hashCode(wk)) % BOSS_NAMES.length];
+  if (!b || b.defeated) {
+    const tier = b && b.max_hp >= 10000 ? (b.tier || 1) + 1 : 1;
+    const name = BOSS_NAMES[Math.abs(hashCode(wk + "-" + tier)) % BOSS_NAMES.length];
+    const hp = bossHp(tier);
     await env.DB.prepare(
-      "INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)"
-    ).bind(wk, name, BOSS_HP, BOSS_HP).run();
+      "INSERT INTO boss (week, name, hp, max_hp, tier) VALUES (?, ?, ?, ?, ?)"
+    ).bind(wk, name, hp, hp, tier).run();
     b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
   }
   let my = 0, attackers = 0;
@@ -843,12 +902,11 @@ async function getBoss(env, email) {
     "SELECT COUNT(DISTINCT email) AS c FROM boss_damage WHERE boss_id=?"
   ).bind(b.id).first();
   attackers = c ? c.c : 0;
-  return { name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers };
+  return { id: b.id, name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers, tier: b.tier || 1 };
 }
 
 async function damageBoss(env, email, dmg) {
-  const wk = weekKey();
-  const b = await env.DB.prepare("SELECT * FROM boss WHERE week=?").bind(wk).first();
+  const b = await getBoss(env, email);
   if (!b || b.defeated) return null;
   const newHp = Math.max(0, b.hp - dmg);
   await env.DB.prepare("UPDATE boss SET hp=? WHERE id=?").bind(newHp, b.id).run();
@@ -861,10 +919,11 @@ async function damageBoss(env, email, dmg) {
     const parts = await env.DB.prepare(
       "SELECT email FROM boss_damage WHERE boss_id=?"
     ).bind(b.id).all();
+    const reward = 150 + 50 * (b.tier || 1);
     for (const p of parts.results) {
-      await env.DB.prepare("UPDATE users SET points=points+200 WHERE email=?").bind(p.email).run();
+      await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(reward, p.email).run();
     }
-    return { killed: true, name: b.name, dmg };
+    return { killed: true, name: b.name, dmg, reward, tier: b.tier || 1 };
   }
   return { killed: false, dmg, hp: newHp };
 }
@@ -924,8 +983,14 @@ async function verifySession(env, token) {
     return null;
   }
   if ((await hmacSha256(secret, payload)) !== sig) return null;
-  const [email, name, exp] = payload.split("|");
+  const [email, name, exp, fp] = payload.split("|");
   if (Number(exp) < Date.now()) return null;
+  if (email && !email.includes("@")) {
+    try {
+      const pr = await env.DB.prepare("SELECT pin FROM pins WHERE email=?").bind(email).first();
+      if (!pr || String(pr.pin).slice(0, 12) !== (fp || "")) return null;
+    } catch { return null; }
+  }
   return { email, name };
 }
 

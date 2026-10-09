@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   await ensureGameTables(env);
   try {
     const us = await env.DB.prepare(
-      "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity FROM users"
+      "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity, acc_ema FROM users"
     ).all();
     const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
     const termRows = await env.DB.prepare(
@@ -36,6 +36,8 @@ export async function onRequestGet({ request, env }) {
         rank: rankOf(a),
         streak: u.login_streak || 0,
         last_ts: u.last_activity || 0,
+        recent_rate: u.acc_ema >= 0 ? Math.round(u.acc_ema * 1000) / 10 : null,
+        suspect: a >= 15 && u.acc_ema >= 0 && u.acc_ema < 0.35,
       });
     }
     students.sort((x, y) => y.last_ts - x.last_ts);
