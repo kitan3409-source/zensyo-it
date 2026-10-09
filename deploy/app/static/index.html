@@ -267,12 +267,14 @@
   .card:nth-of-type(4) { animation-delay: 0.18s; }
   /* M3E wavy linear progress — sine-wave fill tiling horizontally */
   .progress > div, .mission .mbar > div {
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M0 6 Q3 1 6 6 T12 6 T18 6 T24 6' stroke='%23d0bcff' stroke-width='3.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x left center / 24px 100%;
-    min-width: 24px;
-    animation: none;
+    background: repeating-linear-gradient(-45deg, var(--primary) 0 12px, var(--primary-c, #b79df6) 12px 24px);
+    background-size: 34px 100%;
+    animation: waveMove 1.1s linear infinite;
+    min-width: 0;
   }
   .mission .mbar > div {
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpath d='M0 6 Q3 1 6 6 T12 6 T18 6 T24 6' stroke='%237ddc8e' stroke-width='3.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x left center / 24px 100%;
+    background: repeating-linear-gradient(-45deg, var(--good) 0 12px, #9fe3ad 12px 24px);
+    background-size: 34px 100%;
   }
   /* M3 state layers: hover +8% tint, focus +12%, pressed +12% on interactive surfaces */
   .btn { position: relative; overflow: hidden; }
@@ -346,7 +348,19 @@
   }
 
   /* --- fit-to-viewport: window-height-aware app shell --- */
-  .container { max-width: 880px; }
+  .container { max-width: none; }
+  .tabpanel#p-quiz.on { display: flex; flex-direction: column; }
+  #p-quiz > .gameArea { flex-shrink: 0; }
+  #quizCard { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #quizCard .choices { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #quizCard .choice { flex: 1 1 0; }
+  #quizCard .feedback { display: block; visibility: hidden; }
+  #quizCard .feedback.show { visibility: visible; }
+  #quizCard .nav { display: flex; visibility: hidden; }
+  #quizCard .nav.show { visibility: visible; }
+  #scoreCard { flex: 1; }
+  #toastWrap { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 200; align-items: center; pointer-events: none; }
+  .toast { background: var(--inverse-surface, #e6e0ec); color: var(--inverse-on-surface, #241a33); padding: 10px 20px; border-radius: 14px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,0.45); animation: pop 0.3s var(--spring); white-space: nowrap; }
   header { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 2px; flex-wrap: wrap; }
   header h1 { font-size: 1.2rem; margin: 0; }
   header .sub { font-size: 0.72rem; }
@@ -367,7 +381,7 @@
   .prompt { font-size: clamp(1.05rem, 3dvh, 1.35rem); margin-bottom: clamp(8px, 1.8dvh, 16px); }
   .prompt.term { font-size: clamp(1.4rem, 4dvh, 1.9rem); }
   .choices { gap: clamp(6px, 1.2dvh, 10px); }
-  .choice { padding: clamp(7px, 1.5dvh, 14px) 16px; min-height: clamp(40px, 7.2dvh, 54px); font-size: clamp(0.9rem, 2dvh, 1.05rem); border-radius: 16px; }
+  .choice { padding: clamp(7px, 1.5dvh, 14px) 16px; min-height: clamp(36px, 6.2dvh, 54px); font-size: clamp(0.9rem, 2dvh, 1.05rem); border-radius: 16px; }
   .feedback { margin-top: 8px; padding: 8px 14px; }
   .nav { margin-top: 8px; }
   .hint { display: none; }
@@ -588,6 +602,16 @@ document.querySelectorAll('#topTabs button').forEach(b => {
 });
 
 
+function toast(msg) {
+  const d = document.createElement('div');
+  d.className = 'toast';
+  d.textContent = msg;
+  $('toastWrap').appendChild(d);
+  setTimeout(() => { d.style.opacity = '0'; d.style.transition = 'opacity .4s'; }, 3200);
+  setTimeout(() => d.remove(), 3700);
+}
+let knownAch = null;
+
 function fitView() {
   const p = document.getElementById('p-quiz');
   if (!p || !p.classList.contains('on')) return;
@@ -622,6 +646,15 @@ async function loadGame() {
   }
   if (!r.ok) return;
   me = await r.json();
+  if (knownAch !== null) {
+    for (const k of me.unlocked) {
+      if (!knownAch.has(k)) {
+        const a = me.achievements[k];
+        toast(`実績解除: ${a ? a.name : k}${a && a.bonus ? ` +${a.bonus}pt` : ''}`);
+      }
+    }
+  }
+  knownAch = new Set(me.unlocked);
   const items = allItems();
   $('levelVal').textContent = me.level;
   $('powerVal').textContent = me.power;
@@ -927,7 +960,6 @@ async function answer(i) {
     ? '<span class="label">正解！</span>'
     : '<span class="label">不正解…</span>正解は「' + esc(t[key]) + '」';
   $('nextRow').classList.add('show');
-  fitView();
   $('nextBtn').textContent = session.idx + 1 >= session.qs.length ? '結果を見る' : '次の問題 →';
   $('bar').style.width = ((session.idx + 1) / session.qs.length * 100) + '%';
   updateStats();
@@ -1015,5 +1047,6 @@ document.addEventListener('keydown', (e) => {
 
 
 </script>
+<div id="toastWrap"></div>
 </body>
 </html>
