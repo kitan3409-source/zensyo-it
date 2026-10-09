@@ -320,6 +320,30 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01s !important; transition-duration: 0.01s !important; }
   }
+
+  /* --- M3 tab navigation: app-shell, no page scroll --- */
+  body { height: 100dvh; overflow: hidden; }
+  .container { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  header, .controls, #topTabs { flex-shrink: 0; }
+  #topTabs { gap: 2px; border-bottom: 1px solid var(--outline-var); margin: 4px 0 8px; }
+  #topTabs button {
+    flex: 1; background: none; border: none; padding: 11px 4px 12px;
+    font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+    color: var(--on-surface-var); position: relative; border-radius: 10px 10px 0 0;
+    transition: color 0.2s, background 0.2s;
+  }
+  #topTabs button:hover { color: var(--on-surface); background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #topTabs button.on { color: var(--primary); }
+  #topTabs button.on::after {
+    content: ""; position: absolute; left: 18%; right: 18%; bottom: -1px;
+    height: 3px; border-radius: 3px 3px 0 0; background: var(--primary);
+  }
+  .tabpanel { display: none; flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 24px; -webkit-overflow-scrolling: touch; }
+  .tabpanel.on { display: block; }
+  .moreBtn { width: 100%; margin-top: 10px; }
+  @media (max-width: 520px) {
+    #topTabs button { font-size: 0.75rem; padding: 10px 2px; }
+  }
 </style>
 </head>
 <body>
@@ -353,7 +377,15 @@
       </div>
     </div>
   </div>
-  <div class="gameArea">
+    <nav id="topTabs" class="gameArea">
+    <button class="on" data-p="quiz">クイズ</button>
+    <button data-p="char">キャラ</button>
+    <button data-p="gacha">ガチャ</button>
+    <button data-p="task">ミッション</button>
+    <button data-p="rank">ランキング</button>
+  </nav>
+  <div class="tabpanel on" id="p-quiz">
+<div class="gameArea">
     <div class="controls">
       <select id="scopeSel" title="出題範囲"></select>
       <select id="countSel" title="問題数">
@@ -371,8 +403,7 @@
     </div>
     <div class="progress"><div id="bar"></div></div>
   </div>
-
-  <div class="card gameArea" id="quizCard">
+<div class="card gameArea" id="quizCard">
     <div class="q-meta" id="qNum"></div>
     <span class="q-badge" id="qBadge"></span>
     <div class="prompt" id="qPrompt"></div>
@@ -380,9 +411,18 @@
     <div class="feedback" id="feedback"></div>
     <div class="nav" id="nextRow"><button class="btn" id="nextBtn">次の問題 →</button></div>
   </div>
-  <div class="hint gameArea" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
-
-  <div class="card gameArea" id="charCard">
+<div class="hint gameArea" id="hint">キーボード: 1〜4 で回答 / Enter で次へ</div>
+<div class="card" id="scoreCard" style="display:none">
+    <div class="score">
+      <div>お疲れさまでした！</div>
+      <div class="big"><span id="scoreNum">0</span>点</div>
+      <div class="sub" id="scoreDetail" style="color:var(--muted)"></div>
+      <button class="btn" id="againBtn">もう一度</button>
+    </div>
+  </div>
+  </div>
+  <div class="tabpanel" id="p-char">
+<div class="card gameArea" id="charCard">
     <h2>キャラ <span class="sub">Lv <b class="big" id="levelVal">1</b></span> <span class="sub">つよさ <b class="big" id="powerVal">100</b></span> <span class="sub">ポイント <b class="big" id="pointVal">0</b>pt</span> <span class="sub">連続ログイン <b id="streakVal">0</b>日</span></h2>
     <div class="rankBadge"><span class="letter" id="rankVal">E</span><span class="title" id="rankTitle">ただの生徒</span></div>
     <div class="avatarWrap" id="avatarWrap"><img class="avBase" src="/sprites/bird.png" alt="キャラ"></div>
@@ -390,42 +430,41 @@
     <div id="gameNotice"></div>
     <div class="eq" id="equipList"></div>
   </div>
-
-  <div class="card gameArea" id="bossCard">
+  </div>
+  <div class="tabpanel" id="p-gacha">
+<div class="card gameArea" id="gachaCard">
+    <h2>ガチャ <span class="sub">1回 80pt — N60% R30% SR9% SSR1%</span></h2>
+    <button class="btn gachaBtn" id="gachaBtn">ガチャをまわす</button>
+    <div id="gachaResult"></div>
+  </div>
+<div class="card gameArea" id="shopCard">
+    <h2>コレクション <span class="sub" id="collCount"></span></h2>
+    <div class="sub" style="margin-bottom:8px">アイテムはすべてガチャで入手 — 押して装備</div>
+    <div id="shopList"></div>
+  </div>
+  </div>
+  <div class="tabpanel" id="p-task">
+<div class="card gameArea" id="bossCard">
     <h2>週間ボス <span class="sub" id="bossSub"></span></h2>
     <div style="font-weight:800" id="bossName"></div>
     <div class="bossHp"><div id="bossBar"></div></div>
     <div class="bossInfo"><span id="bossMy"></span><span id="bossAtk"></span></div>
   </div>
-
-  <div class="card gameArea" id="gachaCard">
-    <h2>ガチャ <span class="sub">1回 80pt — N60% R30% SR9% SSR1%</span></h2>
-    <button class="btn gachaBtn" id="gachaBtn">ガチャをまわす</button>
-    <div id="gachaResult"></div>
-  </div>
-
-  <div class="card gameArea" id="missionCard">
+<div class="card gameArea" id="missionCard">
     <h2>今日のミッション</h2>
     <div id="missionList"></div>
   </div>
-
-  <div class="card gameArea" id="regionCard">
+<div class="card gameArea" id="regionCard">
     <h2>分野制覇 <span class="sub">8問以上かつ正答率60%で制覇 +100pt</span></h2>
     <div id="regionList"></div>
   </div>
-
-  <div class="card gameArea" id="achCard">
+<div class="card gameArea" id="achCard">
     <h2>バッジ・リワード <span class="sub" id="achCount"></span></h2>
     <div class="achGrid" id="achList"></div>
   </div>
-
-  <div class="card gameArea" id="shopCard">
-    <h2>コレクション <span class="sub" id="collCount"></span></h2>
-    <div class="sub" style="margin-bottom:8px">アイテムはすべてガチャで入手 — 押して装備</div>
-    <div id="shopList"></div>
   </div>
-
-  <div class="card gameArea" id="rankCard">
+  <div class="tabpanel" id="p-rank">
+<div class="card gameArea" id="rankCard">
     <h2>ランキング</h2>
     <div class="tabs" id="rankTabs">
       <button data-t="overall" class="on">総合</button>
@@ -437,14 +476,8 @@
     </div>
     <div id="rankList"></div>
   </div>
+  </div>
 
-  <div class="card" id="scoreCard" style="display:none">
-    <div class="score">
-      <div>お疲れさまでした！</div>
-      <div class="big"><span id="scoreNum">0</span>点</div>
-      <div class="sub" id="scoreDetail" style="color:var(--muted)"></div>
-      <button class="btn" id="againBtn">もう一度</button>
-    </div>
   </div>
 </div>
 
@@ -499,10 +532,18 @@ function showSignedIn() {
     $('manualLogin').style.display = 'none';
     $('loginHint').style.display = 'none';
     for (const el of document.querySelectorAll('.gameArea')) el.style.display = 'block';
+    $('topTabs').style.display = 'flex';
     loadGame();
     startQuiz();
   }
 }
+
+document.querySelectorAll('#topTabs button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#topTabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.p));
+  };
+});
 
 const SLOT_LABEL = { head: '頭', body: '体', lhand: '左手', rhand: '右手', pants: 'ズボン', feet: '足' };
 const SLOT_KEYS = ['head', 'body', 'lhand', 'rhand', 'pants', 'feet'];
@@ -604,9 +645,14 @@ const RANK_FMT = {
 function renderRank() {
   if (!rankData) return;
   const list = rankData[rankTab] || [];
+  const row = (r, i) => `<div class="rankRow${r.id === rankData.me ? ' me' : ''}"><span>${i + 1}位 ${r.name}（${r.id}）</span><span class="pw">${RANK_FMT[rankTab](r)}</span></div>`;
+  const extra = list.slice(20);
   $('rankList').innerHTML = list.length
-    ? list.map((r, i) => `<div class="rankRow${r.id === rankData.me ? ' me' : ''}"><span>${i + 1}位 ${r.name}（${r.id}）</span><span class="pw">${RANK_FMT[rankTab](r)}</span></div>`).join('')
+    ? list.slice(0, 20).map(row).join('') +
+      (extra.length ? `<div id="rankMore" style="display:none">${extra.map(row).join('')}</div><button class="btn ghost moreBtn" id="rankMoreBtn" style="margin-top:10px">さらに読み込む（${extra.length}人）</button>` : '')
     : '<div class="rankRow">まだ誰もいません</div>';
+  const mb = $('rankMoreBtn');
+  if (mb) mb.onclick = () => { $('rankMore').style.display = 'block'; mb.remove(); };
 }
 
 for (const b of document.querySelectorAll('#rankTabs button')) {
