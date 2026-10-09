@@ -32,9 +32,12 @@ export async function onRequestPost({ request, env }) {
     env.DB.prepare(
       "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, " +
       "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=?, " +
-      "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?), " +
-      "acc_ema=CASE WHEN acc_ema<0 THEN ? ELSE acc_ema*0.8+? END WHERE email=?"
-    ).bind(c01, now, earned, earned, streak, streak, c01, c01 * 0.2, sess.email),
+      "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?"
+    ).bind(c01, now, earned, earned, streak, streak, sess.email),
+    env.DB.prepare(
+      "INSERT INTO user_extras (email, acc_ema) VALUES (?, ?) " +
+      "ON CONFLICT(email) DO UPDATE SET acc_ema=CASE WHEN acc_ema<0 THEN excluded.acc_ema ELSE acc_ema*0.8+excluded.acc_ema*0.2 END"
+    ).bind(sess.email, c01),
     env.DB.prepare(
       "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) " +
       "ON CONFLICT(term) DO UPDATE SET answered=answered+1, correct=correct+excluded.correct, last_ts=excluded.last_ts"

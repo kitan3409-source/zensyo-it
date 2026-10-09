@@ -204,6 +204,7 @@ export async function ensureGameTables(env) {
     "CREATE TABLE IF NOT EXISTS boss (id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT, name TEXT, hp INTEGER, max_hp INTEGER, defeated INTEGER DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS boss_damage (email TEXT, boss_id INTEGER, dmg INTEGER DEFAULT 0, PRIMARY KEY (email, boss_id))",
     "CREATE TABLE IF NOT EXISTS pins (email TEXT PRIMARY KEY, pin TEXT)",
+    "CREATE TABLE IF NOT EXISTS user_extras (email TEXT PRIMARY KEY, acc_ema REAL DEFAULT -1)",
     "CREATE TABLE IF NOT EXISTS term_stats (term TEXT PRIMARY KEY, answered INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, last_ts REAL)",
     "CREATE INDEX IF NOT EXISTS idx_answers_student ON answers(student)",
     "CREATE INDEX IF NOT EXISTS idx_answers_ts ON answers(ts)",
@@ -217,8 +218,6 @@ export async function ensureGameTables(env) {
     "ALTER TABLE users ADD COLUMN answered_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN correct_total INTEGER DEFAULT -1",
     "ALTER TABLE users ADD COLUMN last_activity REAL DEFAULT 0",
-    "ALTER TABLE users ADD COLUMN acc_ema REAL DEFAULT -1",
-    "ALTER TABLE boss ADD COLUMN tier INTEGER DEFAULT 1",
   ];
   for (const a of alters) { try { await env.DB.prepare(a).run(); } catch {} }
   const mig = [
@@ -380,12 +379,12 @@ export async function getBoss(env, email) {
   const wk = weekKey();
   let b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
   if (!b || b.defeated) {
-    const tier = b && b.max_hp >= 10000 ? (b.tier || 1) + 1 : 1;
+    const tier = b && b.max_hp >= 20000 ? Math.floor(b.max_hp / 20000) + 1 : 1;
     const name = BOSS_NAMES[Math.abs(hashCode(wk + "-" + tier)) % BOSS_NAMES.length];
     const hp = bossHp(tier);
     await env.DB.prepare(
-      "INSERT INTO boss (week, name, hp, max_hp, tier) VALUES (?, ?, ?, ?, ?)"
-    ).bind(wk, name, hp, hp, tier).run();
+      "INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)"
+    ).bind(wk, name, hp, hp).run();
     b = await env.DB.prepare("SELECT * FROM boss ORDER BY id DESC LIMIT 1").first();
   }
   let my = 0;
@@ -398,7 +397,7 @@ export async function getBoss(env, email) {
   const c = await env.DB.prepare(
     "SELECT COUNT(DISTINCT email) AS c FROM boss_damage WHERE boss_id=?"
   ).bind(b.id).first();
-  return { id: b.id, name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers: c ? c.c : 0, tier: b.tier || 1 };
+  return { id: b.id, name: b.name, hp: b.hp, max_hp: b.max_hp, defeated: !!b.defeated, my_dmg: my, attackers: c ? c.c : 0, tier: Math.max(1, Math.round((b.max_hp || 0) / 20000)) };
 }
 
 export async function damageBoss(env, email, dmg) {
@@ -415,11 +414,11 @@ export async function damageBoss(env, email, dmg) {
     const parts = await env.DB.prepare(
       "SELECT email FROM boss_damage WHERE boss_id=?"
     ).bind(b.id).all();
-    const reward = 150 + 50 * (b.tier || 1);
+    const reward = 150 + 50 * Math.max(1, Math.round((b.max_hp || 0) / 20000));
     for (const p of parts.results) {
       await env.DB.prepare("UPDATE users SET points=points+? WHERE email=?").bind(reward, p.email).run();
     }
-    return { killed: true, name: b.name, dmg, reward, tier: b.tier || 1 };
+    return { killed: true, name: b.name, dmg, reward, tier: Math.max(1, Math.round((b.max_hp || 0) / 20000)) };
   }
   return { killed: false, dmg, hp: newHp };
 }

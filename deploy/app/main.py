@@ -83,15 +83,12 @@ def get_db() -> sqlite3.Connection:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
-    for col, dft in (("answered_total", -1), ("correct_total", -1), ("last_activity", 0), ("acc_ema", -1)):
+    for col, dft in (("answered_total", -1), ("correct_total", -1), ("last_activity", 0)):
         try:
-            conn.execute(f"ALTER TABLE users ADD COLUMN {col} REAL DEFAULT {dft}")
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER DEFAULT {dft}")
         except sqlite3.OperationalError:
             pass
-    try:
-        conn.execute("ALTER TABLE boss ADD COLUMN tier INTEGER DEFAULT 1")
-    except sqlite3.OperationalError:
-        pass
+    conn.execute("CREATE TABLE IF NOT EXISTS user_extras (email TEXT PRIMARY KEY, acc_ema REAL DEFAULT -1)")
     for m in (
         "UPDATE equipped SET slot='rhand' WHERE slot='weapon'",
         "UPDATE equipped SET slot='body' WHERE slot='armor'",
@@ -441,10 +438,10 @@ def get_boss(conn: sqlite3.Connection, email: str = "") -> dict:
     wk = week_key()
     b = conn.execute("SELECT * FROM boss ORDER BY id DESC LIMIT 1").fetchone()
     if not b or b[5]:
-        tier = ((b[6] if len(b) > 6 and b[6] else 1) + 1) if b and b[4] >= 10000 else 1
+        tier = (b[4] // 20000) + 1 if b and b[4] >= 20000 else 1
         name = BOSS_NAMES[abs(hash(wk + "-" + str(tier))) % len(BOSS_NAMES)]
         hp = boss_hp(tier)
-        conn.execute("INSERT INTO boss (week, name, hp, max_hp, tier) VALUES (?, ?, ?, ?, ?)", (wk, name, hp, hp, tier))
+        conn.execute("INSERT INTO boss (week, name, hp, max_hp) VALUES (?, ?, ?, ?)", (wk, name, hp, hp))
         conn.commit()
         b = conn.execute("SELECT * FROM boss ORDER BY id DESC LIMIT 1").fetchone()
     my = 0
@@ -452,7 +449,7 @@ def get_boss(conn: sqlite3.Connection, email: str = "") -> dict:
         d = conn.execute("SELECT dmg FROM boss_damage WHERE email=? AND boss_id=?", (email, b[0])).fetchone()
         my = d[0] if d else 0
     c = conn.execute("SELECT COUNT(DISTINCT email) FROM boss_damage WHERE boss_id=?", (b[0],)).fetchone()
-    return {"id": b[0], "name": b[2], "hp": b[3], "max_hp": b[4], "defeated": bool(b[5]), "my_dmg": my, "attackers": c[0] if c else 0, "tier": b[6] if len(b) > 6 and b[6] else 1}
+    return {"id": b[0], "name": b[2], "hp": b[3], "max_hp": b[4], "defeated": bool(b[5]), "my_dmg": my, "attackers": c[0] if c else 0, "tier": max(1, round((b[4] or 0) / 20000))}
 
 
 def damage_boss(conn: sqlite3.Connection, email: str, dmg: int):
@@ -616,9 +613,13 @@ def post_answer(a: AnswerIn):
     conn.execute(
         "UPDATE users SET answered_total=CASE WHEN answered_total>=0 THEN answered_total+1 ELSE answered_total END, "
         "correct_total=CASE WHEN correct_total>=0 THEN correct_total+? ELSE correct_total END, last_activity=?, "
-        "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?), "
-        "acc_ema=CASE WHEN acc_ema<0 THEN ? ELSE acc_ema*0.8+? END WHERE email=?",
-        (c01, now, earned, earned, streak, streak, c01, c01 * 0.2, sess["email"]),
+        "points=points+?, lifetime=lifetime+?, cur_streak=?, best_streak=MAX(COALESCE(best_streak,0),?) WHERE email=?",
+        (c01, now, earned, earned, streak, streak, sess["email"]),
+    )
+    conn.execute(
+        "INSERT INTO user_extras (email, acc_ema) VALUES (?, ?) "
+        "ON CONFLICT(email) DO UPDATE SET acc_ema=CASE WHEN acc_ema<0 THEN excluded.acc_ema ELSE acc_ema*0.8+excluded.acc_ema*0.2 END",
+        (sess["email"], c01),
     )
     conn.execute(
         "INSERT INTO term_stats (term, answered, correct, last_ts) VALUES (?, 1, ?, ?) "
@@ -992,7 +993,8 @@ def get_stats(pw: str = ""):
             eq_p[e] = eq_p.get(e, 0) + ALL_ITEMS[it]["power"]
     students = []
     for e, n, p, st, at, ct, la, ema in conn.execute(
-        "SELECT email, name, points, login_streak, answered_total, correct_total, last_activity, acc_ema FROM users"
+        "SELECT u.email, u.name, u.points, u.login_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema "
+        "FROM users u LEFT JOIN user_extras x ON x.email=u.email"
     ):
         t = get_totals(conn, {"email": e, "answered_total": at, "correct_total": ct})
         a, c = t["total"], t["correct"]
