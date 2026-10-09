@@ -400,6 +400,23 @@
     .choice { padding: 14px 16px; min-height: 52px; }
     .avatarWrap { width: 150px; height: 150px; }
   }
+
+  /* --- quiz card: dense centered layout, big 2x2 choices --- */
+  #quizCard { justify-content: center; }
+  #quizCard .q-meta { text-align: center; margin-bottom: 6px; }
+  #quizCard .q-badge { display: block; margin: 0 auto 10px; width: fit-content; }
+  #quizCard .prompt { text-align: center; margin: 0 auto clamp(10px, 2dvh, 20px); font-size: clamp(1.2rem, 3.4dvh, 1.6rem); max-width: 46em; }
+  #quizCard .prompt.term { font-size: clamp(1.7rem, 4.6dvh, 2.3rem); letter-spacing: 0.02em; }
+  #quizCard .choices { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: clamp(8px, 1.4dvh, 14px); flex: 1; }
+  #quizCard .choice { min-height: clamp(44px, 8.5dvh, 92px); font-size: clamp(0.95rem, 2.2dvh, 1.15rem); }
+  #quizCard .choice .num { font-size: 1.05em; }
+  #quizCard .feedback { text-align: center; }
+  @media (max-width: 720px) {
+    #quizCard .choices { grid-template-columns: 1fr; }
+    #quizCard .choice { min-height: 52px; }
+    #quizCard .prompt { font-size: 1.1rem; }
+    #quizCard .prompt.term { font-size: 1.45rem; }
+  }
 </style>
 </head>
 <body>
