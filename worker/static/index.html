@@ -417,6 +417,12 @@
     #quizCard .prompt { font-size: 1.1rem; }
     #quizCard .prompt.term { font-size: 1.45rem; }
   }
+
+  /* unify prompt font across question directions */
+  #quizCard .prompt.term { font-size: clamp(1.2rem, 3.4dvh, 1.6rem); color: var(--primary); font-weight: 800; }
+  @media (max-width: 720px) {
+    #quizCard .prompt.term { font-size: 1.1rem; }
+  }
 </style>
 </head>
 <body>
