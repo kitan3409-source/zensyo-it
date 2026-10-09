@@ -345,28 +345,40 @@
     #topTabs button { font-size: 0.75rem; padding: 10px 2px; }
   }
 
-  /* --- fit-to-viewport pass: wider, slimmer chrome, denser quiz --- */
+  /* --- fit-to-viewport: window-height-aware app shell --- */
   .container { max-width: 880px; }
-  header { margin-bottom: 6px; }
-  header h1 { font-size: 1.35rem; margin-bottom: 2px; }
+  header { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 2px; flex-wrap: wrap; }
+  header h1 { font-size: 1.2rem; margin: 0; }
   header .sub { font-size: 0.72rem; }
-  .card { padding: 18px 22px; margin-bottom: 12px; }
-  .controls { margin-bottom: 6px; }
-  #signedIn { font-size: 0.8rem; }
+  .controls { margin-bottom: 4px; flex-wrap: wrap; align-items: center; }
+  #signinArea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #manualLogin { flex: 1 1 100%; }
+  #loginHint { flex: 1 1 100%; margin-top: 2px; }
+  #signedIn { font-size: 0.8rem; flex: 1; }
+  #signinArea > div:last-child { margin-top: 0 !important; }
+  #signinArea #tsToggle { padding: 4px 12px !important; font-size: 0.72rem !important; background: none; border: 1px solid var(--outline-var); color: var(--on-surface-var); }
   #topTabs { margin: 2px 0 6px; }
-  #topTabs button { padding: 9px 4px 10px; }
-  .stats { margin-bottom: 8px; font-size: 0.8rem; }
-  .progress { height: 8px; margin-bottom: 10px; }
-  .q-meta { margin-bottom: 6px; }
-  .q-badge { margin-bottom: 6px; padding: 4px 12px; }
-  .prompt { font-size: 1.3rem; margin-bottom: 14px; }
-  .prompt.term { font-size: 1.8rem; }
-  .choices { gap: 8px; }
-  .choice { padding: 12px 16px; min-height: 48px; font-size: 1rem; border-radius: 16px; }
-  .feedback { margin-top: 10px; padding: 10px 14px; }
-  .nav { margin-top: 10px; }
+  #topTabs button { padding: 8px 4px 9px; }
+  .card { padding: clamp(10px, 2dvh, 20px) clamp(14px, 2.4dvw, 24px); margin-bottom: 10px; }
+  .stats { margin: 0 0 0 auto; font-size: 0.78rem; }
+  .progress { height: clamp(5px, 1dvh, 8px); margin-bottom: clamp(5px, 1dvh, 10px); }
+  .q-meta { margin-bottom: 4px; font-size: 0.78rem; }
+  .q-badge { margin-bottom: 6px; padding: 3px 12px; font-size: 0.75rem; }
+  .prompt { font-size: clamp(1.05rem, 3dvh, 1.35rem); margin-bottom: clamp(8px, 1.8dvh, 16px); }
+  .prompt.term { font-size: clamp(1.4rem, 4dvh, 1.9rem); }
+  .choices { gap: clamp(6px, 1.2dvh, 10px); }
+  .choice { padding: clamp(7px, 1.5dvh, 14px) 16px; min-height: clamp(40px, 7.2dvh, 54px); font-size: clamp(0.9rem, 2dvh, 1.05rem); border-radius: 16px; }
+  .feedback { margin-top: 8px; padding: 8px 14px; }
+  .nav { margin-top: 8px; }
   .hint { display: none; }
-  .avatarWrap { width: 170px; height: 170px; }
+  .avatarWrap { width: 160px; height: 160px; }
+  .tabpanel { padding-bottom: 8px; }
+  @media (max-height: 620px) {
+    header h1 { font-size: 1.05rem; }
+    #topTabs button { padding: 6px 4px 7px; }
+    .choice { min-height: 38px; }
+    .q-meta { font-size: 0.72rem; }
+  }
   @media (max-width: 520px) {
     .container { max-width: none; }
     .prompt { font-size: 1.1rem; }
@@ -424,12 +436,11 @@
         <option value="50">50問</option>
         <option value="all">全部</option>
       </select>
-    </div>
-
-    <div class="stats">
-      <span>正解 <b id="statCorrect">0</b>/<b id="statTotal">0</b></span>
-      <span>正答率 <b id="statRate">-</b></span>
-      <span>連続正解 <b id="statStreak" style="color:var(--good)">0</b></span>
+      <div class="stats">
+        <span>正解 <b id="statCorrect">0</b>/<b id="statTotal">0</b></span>
+        <span>正答率 <b id="statRate">-</b></span>
+        <span>連続正解 <b id="statStreak" style="color:var(--good)">0</b></span>
+      </div>
     </div>
     <div class="progress"><div id="bar"></div></div>
   </div>
@@ -572,8 +583,21 @@ document.querySelectorAll('#topTabs button').forEach(b => {
   b.onclick = () => {
     document.querySelectorAll('#topTabs button').forEach(x => x.classList.toggle('on', x === b));
     document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.p));
+    if (b.dataset.p === 'quiz') fitView();
   };
 });
+
+
+function fitView() {
+  const p = document.getElementById('p-quiz');
+  if (!p || !p.classList.contains('on')) return;
+  p.style.zoom = 1;
+  requestAnimationFrame(() => {
+    const avail = p.clientHeight, need = p.scrollHeight;
+    p.style.zoom = need > avail ? Math.max(0.62, (avail / need).toFixed(3)) : 1;
+  });
+}
+window.addEventListener('resize', fitView);
 
 const SLOT_LABEL = { head: '頭', body: '体', lhand: '左手', rhand: '右手', pants: 'ズボン', feet: '足' };
 const SLOT_KEYS = ['head', 'body', 'lhand', 'rhand', 'pants', 'feet'];
@@ -903,6 +927,7 @@ async function answer(i) {
     ? '<span class="label">正解！</span>'
     : '<span class="label">不正解…</span>正解は「' + esc(t[key]) + '」';
   $('nextRow').classList.add('show');
+  fitView();
   $('nextBtn').textContent = session.idx + 1 >= session.qs.length ? '結果を見る' : '次の問題 →';
   $('bar').style.width = ((session.idx + 1) / session.qs.length * 100) + '%';
   updateStats();
@@ -964,6 +989,7 @@ function next() {
     const pct = Math.round(session.correct / session.qs.length * 100);
     $('scoreNum').textContent = pct;
     $('scoreDetail').textContent = `${session.qs.length}問中 ${session.correct}問正解`;
+    fitView();
     $('scoreCard').classList.remove('pop-in');
     void $('scoreCard').offsetWidth;
     $('scoreCard').classList.add('pop-in');
