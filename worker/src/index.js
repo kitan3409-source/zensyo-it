@@ -255,7 +255,7 @@ async function handle(request, env) {
       if (!sess) return json({ error: "ログインしてください" }, 401);
       await ensureGameTables(env);
       const users = await env.DB.prepare(
-        "SELECT email, name, points, login_streak, answered_total, correct_total FROM users"
+        "SELECT email, name, points, login_streak, best_streak, answered_total, correct_total FROM users"
       ).all();
       const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
       const all = ALL_ITEMS;
@@ -475,7 +475,7 @@ async function handle(request, env) {
       await ensureGameTables(env);
       try {
         const us = await env.DB.prepare(
-          "SELECT u.email, u.name, u.points, u.login_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema " +
+          "SELECT u.email, u.name, u.points, u.login_streak, u.best_streak, u.answered_total, u.correct_total, u.last_activity, x.acc_ema " +
           "FROM users u LEFT JOIN user_extras x ON x.email=u.email"
         ).all();
         const eqs = await env.DB.prepare("SELECT email, item FROM equipped").all();
